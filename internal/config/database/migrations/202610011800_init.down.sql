@@ -1,0 +1,15 @@
+DROP TABLE IF EXISTS audit_log;
+DROP TABLE IF EXISTS transferencia_item;
+DROP TABLE IF EXISTS integracao_erro;
+DROP TABLE IF EXISTS sync_item;
+DROP TABLE IF EXISTS mensagem_tentativa;
+DROP TABLE IF EXISTS sync_batch, mensagem;
+DROP TABLE IF EXISTS transferencia;
+DROP TABLE IF EXISTS sync_job;
+DROP TABLE IF EXISTS heartbeat;
+DROP TABLE IF EXISTS agente;
+DROP TABLE IF EXISTS loja;
+DROP TABLE IF EXISTS grupo_loja;
+DROP TABLE IF EXISTS usuario_empresa;
+DROP TABLE IF EXISTS usuario;
+DROP TABLE IF EXISTS empresa;

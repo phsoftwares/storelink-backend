@@ -1,0 +1,4 @@
+ALTER TABLE grupo_loja
+    ADD COLUMN integrar_precos BOOLEAN NOT NULL DEFAULT TRUE,
+    ADD COLUMN integrar_produtos BOOLEAN NOT NULL DEFAULT TRUE,
+    ADD COLUMN integrar_clientes BOOLEAN NOT NULL DEFAULT TRUE;

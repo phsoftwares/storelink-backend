@@ -1,0 +1,259 @@
+[
+    ["GroupList", "Lista grupos da empresa", "Grupos", ["GET /groups"], null, "models.Page"],
+    ["StoreList", "Lista lojas com estado do agente", "Lojas", ["GET /stores"], null, "models.Page"],
+    ["AgentList", "Lista agentes da empresa", "Agentes", ["GET /agents"], null, "models.Page"],
+    ["MessageList", "Lista mensagens", "Mensagens", ["GET /messages"], null, "models.Page"],
+    ["ErrorList", "Lista erros de integração", "Erros", ["GET /errors"], null, "models.Page"],
+    ["AuditList", "Lista auditoria da empresa", "Auditoria", ["GET /audit"], null, "models.Page"],
+    [
+        "ListJobs",
+        "Lista cargas de sincronização",
+        "Cargas",
+        [
+            "GET /sync/jobs"
+        ],
+        null,
+        "models.Page"
+    ],
+    [
+        "TransferList",
+        "Lista transferências",
+        "Transferências",
+        [
+            "GET /transfers"
+        ],
+        null,
+        "models.Page"
+    ],
+    [
+        "Group",
+        "Cria grupo de lojas",
+        "Grupos",
+        [
+            "POST /groups"
+        ],
+        "models.GroupDTO",
+        "models.Group"
+    ],
+    [
+        "GroupDetail",
+        "Consulta configuraÃ§Ã£o de integraÃ§Ã£o do grupo",
+        "Grupos",
+        [
+            "GET /groups/{id}"
+        ],
+        null,
+        "models.Group"
+    ],
+    [
+        "Store",
+        "Cria loja",
+        "Lojas",
+        [
+            "POST /stores"
+        ],
+        "models.StoreDTO",
+        "models.Store"
+    ],
+    [
+        "StoreDetail",
+        "Consulta detalhes e mÃ©tricas da loja",
+        "Lojas",
+        [
+            "GET /stores/{id}"
+        ],
+        null,
+        "models.StoreView"
+    ],
+    [
+        "Provision",
+        "Provision agent and return its unique API key once",
+        "Agentes",
+        [
+            "POST /agents"
+        ],
+        "models.AgentDTO",
+        "models.AgentProvisionResponse"
+    ],
+    [
+        "RotateAPIKey",
+        "Rotates an agent API key and revokes the previous key",
+        "Agentes",
+        [
+            "POST /agents/{id}/rotate-api-key"
+        ],
+        null,
+        "models.AgentProvisionResponse"
+    ],
+    [
+        "UpdateAgent",
+        "Ativa ou desativa agente",
+        "Agentes",
+        [
+            "PUT /agents/{id}"
+        ],
+        "models.AgentUpdateDTO",
+        "models.Agent"
+    ],
+    [
+        "Dashboard",
+        "Consulta indicadores e estado das lojas",
+        "Monitoramento",
+        [
+            "GET /dashboard"
+        ],
+        null,
+        "models.Dashboard"
+    ],
+    [
+        "Message",
+        "Consulta mensagem e tentativas",
+        "Mensagens",
+        [
+            "GET /messages/{id}"
+        ],
+        null,
+        "map[string]interface{}"
+    ],
+    [
+        "Retry",
+        "Reprocessa mensagem com falha",
+        "Mensagens",
+        [
+            "POST /messages/{id}/retry"
+        ],
+        null,
+        "models.Message"
+    ],
+    [
+        "RetryError",
+        "Reprocessa mensagem do erro de integraÃ§Ã£o",
+        "Erros",
+        [
+            "POST /errors/{id}/retry"
+        ],
+        null,
+        "models.Message"
+    ],
+    [
+        "Transfer",
+        "Consulta transferÃªncia, itens e timeline",
+        "TransferÃªncias",
+        [
+            "GET /transfers/{id}"
+        ],
+        null,
+        "map[string]interface{}"
+    ],
+    [
+        "CreateJob",
+        "Inicia carga e instrui agente origem",
+        "Cargas",
+        [
+            "POST /sync/jobs"
+        ],
+        "models.JobDTO",
+        "models.SyncJob"
+    ],
+    [
+        "Job",
+        "Consulta progresso da carga",
+        "Cargas",
+        [
+            "GET /sync/jobs/{id}"
+        ],
+        null,
+        "models.SyncJob"
+    ],
+    [
+        "JobList",
+        "Lista lotes ou erros da carga",
+        "Cargas",
+        [
+            "GET /sync/jobs/{id}/batches",
+            "GET /sync/jobs/{id}/errors"
+        ],
+        null,
+        "models.Page"
+    ],
+    [
+        "CancelJob",
+        "Cancela carga sem lote em processamento",
+        "Cargas",
+        [
+            "POST /sync/jobs/{id}/cancel"
+        ],
+        null,
+        "models.SyncJob"
+    ],
+    [
+        "RestartJob",
+        "Refaz carga finalizada em novo job",
+        "Cargas",
+        [
+            "POST /sync/jobs/{id}/restart"
+        ],
+        null,
+        "models.SyncJob"
+    ],
+    [
+        "Heartbeat",
+        "Registra heartbeat e mÃ©tricas",
+        "Protocolo agente",
+        [
+            "POST /agent/heartbeat"
+        ],
+        "models.HeartbeatDTO",
+        "map[string]interface{}"
+    ],
+    [
+        "Send",
+        "Publica evento ou comando idempotente",
+        "Protocolo agente",
+        [
+            "POST /agent/messages"
+        ],
+        "models.MessageDTO",
+        "models.Message"
+    ],
+    [
+        "Pending",
+        "Reserva mensagens com claim e lease",
+        "Protocolo agente",
+        [
+            "GET /agent/messages/pending"
+        ],
+        null,
+        "map[string][]models.Message"
+    ],
+    [
+        "Ack",
+        "Confirma somente apÃ³s commit local",
+        "Protocolo agente",
+        [
+            "POST /agent/messages/{id}/ack"
+        ],
+        "models.AckDTO",
+        "models.Message"
+    ],
+    [
+        "Fail",
+        "Registra falha com backoff limitado",
+        "Protocolo agente",
+        [
+            "POST /agent/messages/{id}/fail"
+        ],
+        "models.FailDTO",
+        "models.Message"
+    ],
+    [
+        "Batch",
+        "Recebe lote idempotente da carga",
+        "Protocolo agente",
+        [
+            "POST /agent/sync/jobs/{id}/batches"
+        ],
+        "models.BatchDTO",
+        "models.SyncBatch"
+    ]
+]

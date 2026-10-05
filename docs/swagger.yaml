@@ -1,0 +1,4152 @@
+basePath: /api
+definitions:
+  models.AckDTO:
+    properties:
+      claimToken:
+        type: string
+      errors:
+        items:
+          $ref: '#/definitions/models.ItemError'
+        type: array
+      processedCount:
+        minimum: 0
+        type: integer
+    required:
+    - claimToken
+    type: object
+  models.Address:
+    properties:
+      bairro:
+        type: string
+      cep:
+        type: string
+      cidade:
+        type: string
+      complemento:
+        type: string
+      logradouro:
+        type: string
+      numero:
+        type: string
+      uf:
+        type: string
+    type: object
+  models.Agent:
+    properties:
+      ativo:
+        type: boolean
+      createdAt:
+        type: string
+      id:
+        type: string
+      idEmpresa:
+        type: string
+      nome:
+        type: string
+      storeId:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.AgentDTO:
+    properties:
+      nome:
+        maxLength: 255
+        type: string
+      storeId:
+        type: string
+    required:
+    - nome
+    - storeId
+    type: object
+  models.AgentProvisionResponse:
+    properties:
+      agent:
+        $ref: '#/definitions/models.Agent'
+      apiKey:
+        type: string
+    type: object
+  models.AgentUpdateDTO:
+    properties:
+      ativo:
+        type: boolean
+    required:
+    - ativo
+    type: object
+  models.AppError:
+    properties:
+      codigo:
+        type: integer
+      mensagemErro:
+        type: string
+    type: object
+  models.BatchDTO:
+    properties:
+      batchNumber:
+        minimum: 1
+        type: integer
+      id:
+        type: string
+      isLast:
+        type: boolean
+      items:
+        items:
+          type: object
+        maxItems: 1000
+        type: array
+      totalItems:
+        minimum: 0
+        type: integer
+    required:
+    - id
+    type: object
+  models.CashierOperatorSnapshot:
+    properties:
+      codigo_funcionario:
+        maxLength: 100
+        type: string
+      codigo_local:
+        maxLength: 100
+        type: string
+      fechamento_cego:
+        type: boolean
+      pode_abrir_caixa_geral:
+        type: boolean
+      pode_visualizar_todos_relatorios:
+        type: boolean
+    required:
+    - codigo_funcionario
+    - codigo_local
+    - fechamento_cego
+    - pode_abrir_caixa_geral
+    - pode_visualizar_todos_relatorios
+    type: object
+  models.CashierOperatorSnapshotBatchDTO:
+    properties:
+      itens:
+        items:
+          $ref: '#/definitions/models.CashierOperatorSnapshot'
+        maxItems: 1000
+        minItems: 1
+        type: array
+    required:
+    - itens
+    type: object
+  models.CashierOperatorValue:
+    properties:
+      codigo_funcionario:
+        type: string
+      codigo_local:
+        maxLength: 100
+        type: string
+      fechamento_cego:
+        type: boolean
+      pode_abrir_caixa_geral:
+        type: boolean
+      pode_visualizar_todos_relatorios:
+        type: boolean
+    required:
+    - codigo_local
+    - fechamento_cego
+    - pode_abrir_caixa_geral
+    - pode_visualizar_todos_relatorios
+    type: object
+  models.CatalogBatchResult:
+    properties:
+      itens:
+        items:
+          $ref: '#/definitions/models.CatalogWriteResult'
+        type: array
+      quantidade_processada:
+        type: integer
+    type: object
+  models.CatalogWriteResult:
+    properties:
+      codigo_local:
+        type: string
+      id:
+        type: string
+    type: object
+  models.Company:
+    properties:
+      ativo:
+        type: boolean
+      cnpj:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: string
+      nome:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.CompanyDTO:
+    properties:
+      ativo:
+        type: boolean
+      cnpj:
+        maxLength: 20
+        minLength: 14
+        type: string
+      nome:
+        maxLength: 255
+        type: string
+    required:
+    - cnpj
+    - nome
+    type: object
+  models.CustomerBatchDTO:
+    properties:
+      itens:
+        items:
+          $ref: '#/definitions/models.CustomerSnapshot'
+        maxItems: 1000
+        minItems: 1
+        type: array
+    required:
+    - itens
+    type: object
+  models.CustomerSnapshot:
+    properties:
+      celular:
+        type: string
+      codigo_local:
+        maxLength: 100
+        type: string
+      documento:
+        type: string
+      email:
+        type: string
+      endereco:
+        $ref: '#/definitions/models.Address'
+      id:
+        type: string
+      nome:
+        maxLength: 255
+        type: string
+      situacao_credito:
+        enum:
+        - STANDARD
+        - UNDER_REVIEW
+        - UNCLASSIFIED
+        type: string
+      telefone:
+        type: string
+    required:
+    - codigo_local
+    - nome
+    - situacao_credito
+    type: object
+  models.Dashboard:
+    properties:
+      companies:
+        type: integer
+      completedJobs:
+        type: integer
+      customers:
+        type: integer
+      degraded:
+        type: integer
+      employees:
+        type: integer
+      failedJobs:
+        type: integer
+      failedMessages:
+        type: integer
+      failedTransfers:
+        type: integer
+      groups:
+        type: integer
+      messagesToday:
+        type: integer
+      offline:
+        type: integer
+      online:
+        type: integer
+      pendingMessages:
+        type: integer
+      pendingTransfers:
+        type: integer
+      products:
+        type: integer
+      runningJobs:
+        type: integer
+      stores:
+        type: integer
+      suppliers:
+        type: integer
+    type: object
+  models.EmployeeBatchDTO:
+    properties:
+      itens:
+        items:
+          $ref: '#/definitions/models.EmployeeSnapshot'
+        maxItems: 1000
+        minItems: 1
+        type: array
+    required:
+    - itens
+    type: object
+  models.EmployeeSnapshot:
+    properties:
+      ativo:
+        type: boolean
+      codigo_local:
+        maxLength: 100
+        type: string
+      documento:
+        type: string
+      email:
+        type: string
+      funcao:
+        type: string
+      id:
+        type: string
+      nome:
+        maxLength: 255
+        type: string
+      operadores_caixa:
+        items:
+          $ref: '#/definitions/models.CashierOperatorValue'
+        type: array
+      telefone:
+        type: string
+    required:
+    - ativo
+    - codigo_local
+    - nome
+    type: object
+  models.FailDTO:
+    properties:
+      claimToken:
+        type: string
+      error:
+        maxLength: 2000
+        type: string
+    required:
+    - claimToken
+    - error
+    type: object
+  models.Group:
+    properties:
+      ativo:
+        type: boolean
+      createdAt:
+        type: string
+      id:
+        type: string
+      idEmpresa:
+        type: string
+      integrarClientes:
+        type: boolean
+      integrarFuncionarios:
+        type: boolean
+      integrarPrecos:
+        type: boolean
+      integrarProdutos:
+        type: boolean
+      nome:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.GroupDTO:
+    properties:
+      ativo:
+        type: boolean
+      integrarClientes:
+        type: boolean
+      integrarFuncionarios:
+        type: boolean
+      integrarPrecos:
+        type: boolean
+      integrarProdutos:
+        type: boolean
+      nome:
+        maxLength: 255
+        type: string
+    required:
+    - nome
+    type: object
+  models.HeartbeatDTO:
+    properties:
+      customers:
+        minimum: 0
+        type: integer
+      databaseOk:
+        type: boolean
+      employees:
+        minimum: 0
+        type: integer
+      errorCount:
+        minimum: 0
+        type: integer
+      pendingCount:
+        minimum: 0
+        type: integer
+      products:
+        minimum: 0
+        type: integer
+      status:
+        enum:
+        - ONLINE
+        - OFFLINE
+        - DEGRADED
+        type: string
+      suppliers:
+        minimum: 0
+        type: integer
+      version:
+        maxLength: 50
+        type: string
+    required:
+    - status
+    - version
+    type: object
+  models.IntegrationItemError:
+    properties:
+      chave_item:
+        type: string
+      codigo_erro:
+        type: string
+      erro:
+        type: string
+    type: object
+  models.IntegrationTransferDTO:
+    properties:
+      cnpj_destino:
+        maxLength: 20
+        type: string
+      cnpj_origem:
+        maxLength: 20
+        type: string
+      data_envio:
+        type: string
+      id:
+        type: string
+      id_loja_destino:
+        type: string
+      itens:
+        items:
+          $ref: '#/definitions/models.TransferLine'
+        maxItems: 1000
+        minItems: 1
+        type: array
+      numero:
+        maxLength: 100
+        type: string
+      observacao_remetente:
+        maxLength: 2000
+        type: string
+      usuario_remetente:
+        maxLength: 100
+        type: string
+    required:
+    - data_envio
+    - id
+    - itens
+    - numero
+    type: object
+  models.ItemError:
+    properties:
+      error:
+        type: string
+      errorCode:
+        type: string
+      itemKey:
+        type: string
+    type: object
+  models.JobDTO:
+    properties:
+      batchSize:
+        maximum: 1000
+        minimum: 0
+        type: integer
+      destinationStoreId:
+        type: string
+      entity:
+        enum:
+        - product
+        - customer
+        - employee
+        - supplier
+        type: string
+      originStoreId:
+        type: string
+    required:
+    - destinationStoreId
+    - entity
+    - originStoreId
+    type: object
+  models.LoginDTO:
+    properties:
+      email:
+        maxLength: 100
+        type: string
+      senha:
+        maxLength: 72
+        type: string
+    required:
+    - email
+    - senha
+    type: object
+  models.LoginResponse:
+    properties:
+      companies:
+        items:
+          $ref: '#/definitions/models.Company'
+        type: array
+      expiraEm:
+        type: string
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/models.User'
+    type: object
+  models.Message:
+    properties:
+      acknowledgedAt:
+        type: string
+      attempts:
+        type: integer
+      claimToken:
+        type: string
+      createdAt:
+        type: string
+      destinationStoreId:
+        type: string
+      id:
+        type: string
+      idEmpresa:
+        type: string
+      lastAttemptAt:
+        type: string
+      lastError:
+        type: string
+      leaseUntil:
+        type: string
+      nextAttemptAt:
+        type: string
+      operation:
+        type: string
+      originStoreId:
+        type: string
+      payload:
+        type: object
+      status:
+        type: string
+      syncBatchId:
+        type: string
+      syncJobId:
+        type: string
+      transferId:
+        type: string
+      type:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.MessageDTO:
+    properties:
+      createdAt:
+        type: string
+      destinationStoreId:
+        type: string
+      id:
+        type: string
+      operation:
+        maxLength: 100
+        type: string
+      payload:
+        type: object
+      type:
+        enum:
+        - EVENT
+        - COMMAND
+        type: string
+    required:
+    - destinationStoreId
+    - id
+    - operation
+    - payload
+    - type
+    type: object
+  models.Page:
+    properties:
+      items: {}
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      total:
+        type: integer
+    type: object
+  models.ProductBarcodeValue:
+    properties:
+      ativo:
+        type: boolean
+      fracao:
+        type: number
+      principal:
+        type: boolean
+      valor:
+        maxLength: 32
+        type: string
+    required:
+    - ativo
+    - principal
+    - valor
+    type: object
+  models.ProductBatchDTO:
+    properties:
+      itens:
+        items:
+          $ref: '#/definitions/models.ProductSnapshot'
+        maxItems: 1000
+        minItems: 1
+        type: array
+    required:
+    - itens
+    type: object
+  models.ProductCatalogItem:
+    properties:
+      precos:
+        items:
+          $ref: '#/definitions/models.ProductPriceSnapshot'
+        type: array
+      precos_autoritativos:
+        type: boolean
+      produto:
+        $ref: '#/definitions/models.ProductSnapshot'
+    type: object
+  models.ProductCatalogPage:
+    properties:
+      itens:
+        items:
+          $ref: '#/definitions/models.ProductCatalogItem'
+        type: array
+      limite:
+        type: integer
+      pagina:
+        type: integer
+      tem_mais:
+        type: boolean
+      total:
+        type: integer
+    type: object
+  models.ProductCategoryValue:
+    properties:
+      codigo_local:
+        type: string
+      nome:
+        maxLength: 100
+        type: string
+    required:
+    - nome
+    type: object
+  models.ProductPriceBatchDTO:
+    properties:
+      itens:
+        items:
+          $ref: '#/definitions/models.ProductPriceSnapshot'
+        maxItems: 1000
+        minItems: 1
+        type: array
+    required:
+    - itens
+    type: object
+  models.ProductPriceBatchResult:
+    properties:
+      itens:
+        items:
+          $ref: '#/definitions/models.ProductPriceSnapshot'
+        type: array
+      quantidade_processada:
+        type: integer
+    type: object
+  models.ProductPriceSnapshot:
+    properties:
+      ativo:
+        type: boolean
+      codigo_local:
+        maxLength: 100
+        type: string
+      quantidade:
+        type: number
+      tipo:
+        enum:
+        - COST
+        - SALE
+        - WHOLESALE
+        type: string
+      valido_desde:
+        type: string
+      valor:
+        minimum: 0
+        type: number
+    required:
+    - ativo
+    - codigo_local
+    - quantidade
+    - tipo
+    - valor
+    type: object
+  models.ProductPublicationBatchDTO:
+    properties:
+      itens:
+        items:
+          $ref: '#/definitions/models.ProductPublicationDTO'
+        maxItems: 500
+        minItems: 1
+        type: array
+    required:
+    - itens
+    type: object
+  models.ProductPublicationBatchResult:
+    properties:
+      itens:
+        items:
+          $ref: '#/definitions/models.ProductPublicationResult'
+        type: array
+      quantidade_processada:
+        type: integer
+    type: object
+  models.ProductPublicationDTO:
+    properties:
+      codigo_local_candidato:
+        description: |-
+          RequestNewLocalCode is used when a receiving store found that the
+          canonical product code is occupied by another local product. The server
+          moves this product mapping atomically to LocalCodeCandidate before it
+          fans the publication out, instead of rejecting the whole synchronization.
+        type: string
+      evento:
+        enum:
+        - CREATED
+        - UPDATED
+        - DISABLED
+        type: string
+      id:
+        type: string
+      ids_lojas_destino:
+        items:
+          type: string
+        type: array
+      precos:
+        items:
+          $ref: '#/definitions/models.ProductPriceSnapshot'
+        type: array
+      precos_autoritativos:
+        description: |-
+          PricesAuthoritative tells the receiver that an empty prices array is
+          intentional and must clear the source store's current price tiers.
+          Without this bit, an omitted price snapshot is indistinguishable from a
+          product publication that simply did not carry pricing.
+        type: boolean
+      produto:
+        $ref: '#/definitions/models.ProductSnapshot'
+      solicitar_novo_codigo_local:
+        type: boolean
+    required:
+    - evento
+    - produto
+    type: object
+  models.ProductPublicationResult:
+    properties:
+      codigo_local:
+        type: string
+      destinos_enfileirados:
+        type: integer
+      evento:
+        type: string
+      hash_payload:
+        type: string
+      id:
+        type: string
+      id_produto:
+        type: string
+      versao:
+        type: integer
+    type: object
+  models.ProductSnapshot:
+    properties:
+      ativo:
+        type: boolean
+      cest:
+        type: string
+      codigo_local:
+        maxLength: 100
+        type: string
+      codigos_barras:
+        items:
+          $ref: '#/definitions/models.ProductBarcodeValue'
+        type: array
+      descricao:
+        type: string
+      grupo:
+        $ref: '#/definitions/models.ProductCategoryValue'
+      id_produto:
+        type: string
+      marca:
+        type: string
+      ncm:
+        type: string
+      nome:
+        maxLength: 255
+        type: string
+      sku:
+        type: string
+      subgrupo:
+        $ref: '#/definitions/models.ProductCategoryValue'
+      unidade:
+        type: string
+      usa_serial:
+        type: boolean
+    required:
+    - ativo
+    - codigo_local
+    - nome
+    - usa_serial
+    type: object
+  models.Store:
+    properties:
+      ativo:
+        type: boolean
+      cnpj:
+        type: string
+      codigo:
+        type: string
+      createdAt:
+        type: string
+      groupId:
+        type: string
+      id:
+        type: string
+      idEmpresa:
+        type: string
+      nome:
+        type: string
+      tipo:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.StoreDTO:
+    properties:
+      ativo:
+        type: boolean
+      cnpj:
+        maxLength: 20
+        type: string
+      codigo:
+        maxLength: 50
+        type: string
+      groupId:
+        type: string
+      nome:
+        maxLength: 255
+        type: string
+      tipo:
+        enum:
+        - MATRIZ
+        - FILIAL
+        type: string
+    required:
+    - codigo
+    - groupId
+    - nome
+    - tipo
+    type: object
+  models.StoreView:
+    properties:
+      agentVersion:
+        type: string
+      ativo:
+        type: boolean
+      cnpj:
+        type: string
+      codigo:
+        type: string
+      createdAt:
+        type: string
+      customers:
+        type: integer
+      employees:
+        type: integer
+      errors:
+        type: integer
+      groupId:
+        type: string
+      id:
+        type: string
+      idEmpresa:
+        type: string
+      lastSeen:
+        type: string
+      nome:
+        type: string
+      pending:
+        type: integer
+      products:
+        type: integer
+      status:
+        type: string
+      suppliers:
+        type: integer
+      tipo:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.SyncBatch:
+    properties:
+      batchNumber:
+        type: integer
+      createdAt:
+        type: string
+      errorCount:
+        type: integer
+      id:
+        type: string
+      idEmpresa:
+        type: string
+      isLast:
+        type: boolean
+      itemCount:
+        type: integer
+      jobId:
+        type: string
+      messageId:
+        type: string
+      processedCount:
+        type: integer
+      status:
+        type: string
+      totalItems:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  models.SyncJob:
+    properties:
+      batchSize:
+        type: integer
+      createdAt:
+        type: string
+      destinationStoreId:
+        type: string
+      entity:
+        type: string
+      errorItems:
+        type: integer
+      finishedAt:
+        type: string
+      id:
+        type: string
+      idEmpresa:
+        type: string
+      originStoreId:
+        type: string
+      processedItems:
+        type: integer
+      progress:
+        type: number
+      receivedItems:
+        type: integer
+      sourceFinished:
+        type: boolean
+      status:
+        type: string
+      totalItems:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  models.Transfer:
+    properties:
+      createdAt:
+        type: string
+      destinationCnpj:
+        type: string
+      destinationStoreId:
+        type: string
+      id:
+        type: string
+      idEmpresa:
+        type: string
+      itemCount:
+        type: integer
+      numero:
+        type: string
+      originCnpj:
+        type: string
+      originStoreId:
+        type: string
+      receivedAt:
+        type: string
+      senderNote:
+        type: string
+      senderUsername:
+        type: string
+      sentAt:
+        type: string
+      status:
+        type: string
+      syncedAt:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.TransferLine:
+    properties:
+      classe_terapeutica:
+        type: string
+      codigo_barras:
+        type: string
+      codigo_lote:
+        type: string
+      codigo_produto:
+        type: string
+      controlado:
+        type: boolean
+      data_fabricacao:
+        type: string
+      data_validade:
+        type: string
+      id:
+        type: string
+      id_produto:
+        type: string
+      lote:
+        type: string
+      lote_serial:
+        type: string
+      nome:
+        maxLength: 255
+        type: string
+      preco_custo:
+        type: number
+      preco_venda:
+        type: number
+      quantidade:
+        type: number
+      registro_ms:
+        type: string
+      serial:
+        type: string
+      sku:
+        type: string
+      tabela_preco_informada:
+        type: boolean
+      tabela_preco_payload:
+        type: string
+      tipo_produto_sngpc:
+        type: string
+      unidade:
+        type: string
+      unidade_sngpc:
+        type: string
+      usa_lote:
+        type: boolean
+      usa_serial:
+        type: boolean
+      usa_tb_pc:
+        type: string
+      usa_tb_pc_informada:
+        type: boolean
+    required:
+    - id
+    - nome
+    - quantidade
+    type: object
+  models.TransferStatusDTO:
+    properties:
+      erro:
+        maxLength: 2000
+        type: string
+      erros_itens:
+        items:
+          $ref: '#/definitions/models.IntegrationItemError'
+        type: array
+      status:
+        enum:
+        - RECEIVED
+        - FAILED
+        - CANCELLED
+        type: string
+    required:
+    - status
+    type: object
+  models.TransferSubmission:
+    properties:
+      duplicado:
+        type: boolean
+      id:
+        type: string
+      numero:
+        type: string
+      quantidade_itens:
+        type: integer
+      status:
+        type: string
+    type: object
+  models.User:
+    properties:
+      ativo:
+        type: boolean
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      nome:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: StoreLink integrates stores. Administrators use JWT Bearer; each FNTS_Server
+    installation uses its own fixed X-API-Key and database-validated X-Agent-ID.
+  title: StoreLink API
+  version: "1.0"
+paths:
+  /agent/heartbeat:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Agent ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Estado do agente
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.HeartbeatDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Recebe estado recente do agente local
+      tags:
+      - Protocolo agente
+  /agent/messages:
+    post:
+      consumes:
+      - application/json
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: Agent ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Dados da operação
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.MessageDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Message'
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Message'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Publica evento ou comando idempotente
+      tags:
+      - Protocolo agente
+  /agent/messages/{id}/ack:
+    post:
+      consumes:
+      - application/json
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: Agent ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: UUID do recurso
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados da operação
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.AckDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Message'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Confirma somente após commit local
+      tags:
+      - Protocolo agente
+  /agent/messages/{id}/fail:
+    post:
+      consumes:
+      - application/json
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: Agent ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: UUID do recurso
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados da operação
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.FailDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Message'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Registra falha com backoff limitado
+      tags:
+      - Protocolo agente
+  /agent/messages/pending:
+    get:
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: Agent ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Quantidade de 1 a 100
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/models.Message'
+              type: array
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Reserva mensagens com claim e lease
+      tags:
+      - Protocolo agente
+  /agent/sync/jobs/{id}/batches:
+    post:
+      consumes:
+      - application/json
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: Agent ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: UUID do recurso
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados da operação
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.BatchDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SyncBatch'
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.SyncBatch'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Recebe lote idempotente da carga
+      tags:
+      - Protocolo agente
+  /agents:
+    get:
+      parameters:
+      - description: Número da página
+        in: query
+        name: page
+        type: integer
+      - description: Itens por página
+        in: query
+        name: pageSize
+        type: integer
+      - description: UUID da loja
+        in: query
+        name: storeId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Page'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Lista agentes da empresa
+      tags:
+      - Agentes
+    post:
+      consumes:
+      - application/json
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: Dados da operação
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.AgentDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AgentProvisionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Provisiona agente; credencial exibida uma vez
+      tags:
+      - Agentes
+  /agents/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: UUID do recurso
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados da operação
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.AgentUpdateDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Agent'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Ativa ou desativa agente
+      tags:
+      - Agentes
+  /agents/{id}/rotate-api-key:
+    post:
+      description: A nova chave aparece somente nesta resposta; configurar o agente
+        com STORELINK_API_KEY.
+      parameters:
+      - description: UUID do agente
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AgentProvisionResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Rotaciona a chave fixa do agente
+      tags:
+      - Agentes
+  /audit:
+    get:
+      parameters:
+      - description: Número da página
+        in: query
+        name: page
+        type: integer
+      - description: Itens por página
+        in: query
+        name: pageSize
+        type: integer
+      - description: UUID da loja
+        in: query
+        name: storeId
+        type: string
+      - description: Data inicial
+        in: query
+        name: from
+        type: string
+      - description: Data final
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Page'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Lista auditoria da empresa
+      tags:
+      - Auditoria
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Retorna JWT e empresas associadas. Selecione empresa pelo header
+        idempresa.
+      parameters:
+      - description: E-mail e senha
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      summary: Autentica administrador
+      tags:
+      - Autenticação
+  /auth/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Consulta sessão e empresas autorizadas
+      tags:
+      - Autenticação
+  /companies:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Page'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Lista empresas autorizadas
+      tags:
+      - Empresas
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Empresa
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CompanyDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Company'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Cria empresa e associa administrador
+      tags:
+      - Empresas
+  /companies/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: UUID da empresa
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Empresa
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CompanyDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Company'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Atualiza empresa autorizada
+      tags:
+      - Empresas
+  /dashboard:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Dashboard'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Consulta indicadores e estado das lojas
+      tags:
+      - Monitoramento
+  /errors:
+    get:
+      parameters:
+      - description: Número da página
+        in: query
+        name: page
+        type: integer
+      - description: Itens por página
+        in: query
+        name: pageSize
+        type: integer
+      - description: Busca por operação
+        in: query
+        name: q
+        type: string
+      - description: Status
+        in: query
+        name: status
+        type: string
+      - description: Operação
+        in: query
+        name: operation
+        type: string
+      - description: UUID da loja
+        in: query
+        name: storeId
+        type: string
+      - description: Data inicial
+        in: query
+        name: from
+        type: string
+      - description: Data final
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Page'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Lista erros de integração
+      tags:
+      - Erros
+  /errors/{id}/retry:
+    post:
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: UUID do recurso
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Message'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Reprocessa mensagem do erro de integração
+      tags:
+      - Erros
+  /groups:
+    get:
+      parameters:
+      - description: Número da página
+        in: query
+        name: page
+        type: integer
+      - description: Itens por página
+        in: query
+        name: pageSize
+        type: integer
+      - description: Busca por nome
+        in: query
+        name: q
+        type: string
+      - description: Status
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Page'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Lista grupos da empresa
+      tags:
+      - Grupos
+    post:
+      consumes:
+      - application/json
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: Dados da operação
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.GroupDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Group'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Cria grupo de lojas
+      tags:
+      - Grupos
+  /groups/{id}:
+    get:
+      parameters:
+      - description: UUID do grupo
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Group'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Consulta configuração de integração do grupo
+      tags:
+      - Grupos
+  /health:
+    get:
+      description: Endpoint público de liveness. Readiness consulta PostgreSQL separadamente.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Verifica disponibilidade HTTP
+      tags:
+      - Saúde
+  /integracao/v1/clientes/{codigo_local}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Customer code in this store
+        in: path
+        name: localCode
+        required: true
+        type: string
+      - description: Customer snapshot
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CustomerSnapshot'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CustomerSnapshot'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Create or update one canonical customer
+      tags:
+      - Direct integration
+  /integracao/v1/clientes/lotes:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Customer batch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CustomerBatchDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CatalogBatchResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Create or update customers in an atomic batch of at most 1000
+      tags:
+      - Direct integration
+  /integracao/v1/funcionarios/{codigo_local}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Employee code in this store
+        in: path
+        name: localCode
+        required: true
+        type: string
+      - description: Employee snapshot
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.EmployeeSnapshot'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.EmployeeSnapshot'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Create or update one canonical employee and its cashier operators
+      tags:
+      - Direct integration
+  /integracao/v1/funcionarios/lotes:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Employee batch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.EmployeeBatchDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CatalogBatchResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Create or update employees in an atomic batch of at most 1000
+      tags:
+      - Direct integration
+  /integracao/v1/mensagens/{id}/confirmar:
+    post:
+      consumes:
+      - application/json
+      description: O FNTS_Server confirma somente depois de aplicar a mensagem na
+        base local.
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: UUID da mensagem
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Resultado do processamento
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.AckDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Message'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Confirma uma mensagem do contrato de integraÃ§Ã£o
+      tags:
+      - Direct integration
+  /integracao/v1/mensagens/{id}/falhar:
+    post:
+      consumes:
+      - application/json
+      description: Recoloca a mensagem em retry com backoff ou em dead-letter conforme
+        a polÃ­tica do StoreLink.
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: UUID da mensagem
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Falha do processamento
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.FailDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Message'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Registra falha de uma mensagem do contrato de integraÃ§Ã£o
+      tags:
+      - Direct integration
+  /integracao/v1/mensagens/pendentes:
+    get:
+      description: O FNTS_Server reserva mensagens da fila local do StoreLink com
+        claim e lease.
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Quantidade de 1 a 100
+        in: query
+        name: limit
+        type: integer
+      - description: Prefixo da operaÃ§Ã£o
+        in: query
+        name: operation
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/models.Message'
+              type: array
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Reserva mensagens do contrato de integraÃ§Ã£o
+      tags:
+      - Direct integration
+  /integracao/v1/operadores-caixa/{codigo_local}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Cashier operator code in this store
+        in: path
+        name: localCode
+        required: true
+        type: string
+      - description: Cashier operator snapshot
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CashierOperatorSnapshot'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CatalogWriteResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Create or update one cashier operator
+      tags:
+      - Direct integration
+  /integracao/v1/operadores-caixa/lotes:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Cashier operator batch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CashierOperatorSnapshotBatchDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CatalogBatchResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Create or update cashier operators in an atomic batch of at most 1000
+      tags:
+      - Direct integration
+  /integracao/v1/precos-produtos/lotes:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Product price batch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProductPriceBatchDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ProductPriceBatchResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Create or update up to 1000 store-specific price tiers
+      tags:
+      - Direct integration
+  /integracao/v1/produtos/{codigo_local}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Product code in this store
+        in: path
+        name: localCode
+        required: true
+        type: string
+      - description: Product snapshot
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProductSnapshot'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ProductSnapshot'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Create or update one canonical product
+      tags:
+      - Direct integration
+  /integracao/v1/produtos/{codigo_local}/precos/{tipo}/{quantidade}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Product code in this store
+        in: path
+        name: localCode
+        required: true
+        type: string
+      - description: 'Price kind: COST, SALE, or WHOLESALE'
+        in: path
+        name: kind
+        required: true
+        type: string
+      - description: Minimum quantity for this tier
+        in: path
+        name: quantity
+        required: true
+        type: number
+      - description: Product price tier
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProductPriceSnapshot'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ProductPriceSnapshot'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Create or update one store-specific price tier
+      tags:
+      - Direct integration
+  /integracao/v1/produtos/catalogo:
+    get:
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Rows per page, up to 500
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ProductCatalogPage'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Lê a visão do catálogo da loja autenticada para carga inicial
+      tags:
+      - Domain integration
+  /integracao/v1/produtos/lotes:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Product batch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProductBatchDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CatalogBatchResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Create or update products in an atomic batch of at most 1000
+      tags:
+      - Direct integration
+  /integracao/v1/produtos/publicacoes:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Normalized product publication
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProductPublicationDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ProductPublicationResult'
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.ProductPublicationResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Publica um produto normalizado e cria mensagens para as lojas do grupo
+      tags:
+      - Domain integration
+  /integracao/v1/produtos/publicacoes/lotes:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Normalized product publications
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProductPublicationBatchDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ProductPublicationBatchResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Publica até 500 produtos normalizados em uma chamada
+      tags:
+      - Domain integration
+  /integracao/v1/transferencias:
+    get:
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Rows per page, up to 100
+        in: query
+        name: pageSize
+        type: integer
+      - description: Transfer status
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Page'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: List transfers addressed to this store
+      tags:
+      - Direct integration
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Transfer and full line snapshots
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.IntegrationTransferDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TransferSubmission'
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.TransferSubmission'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Publish an idempotent transfer from FNTS
+      tags:
+      - Direct integration
+  /integracao/v1/transferencias/{id}:
+    get:
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Transfer UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Read a transfer involving this store
+      tags:
+      - Direct integration
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Store credential ID
+        in: header
+        name: X-Agent-ID
+        required: true
+        type: string
+      - description: Transfer UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New status and optional item errors
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.TransferStatusDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Transfer'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - AgentAPIKey: []
+      summary: Record transfer receipt, failure, or origin cancellation
+      tags:
+      - Direct integration
+  /messages:
+    get:
+      parameters:
+      - description: Número da página
+        in: query
+        name: page
+        type: integer
+      - description: Itens por página
+        in: query
+        name: pageSize
+        type: integer
+      - description: Busca por operação
+        in: query
+        name: q
+        type: string
+      - description: Status
+        in: query
+        name: status
+        type: string
+      - description: Operação
+        in: query
+        name: operation
+        type: string
+      - description: UUID da loja
+        in: query
+        name: storeId
+        type: string
+      - description: Data inicial
+        in: query
+        name: from
+        type: string
+      - description: Data final
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Page'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Lista mensagens
+      tags:
+      - Mensagens
+  /messages/{id}:
+    get:
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: UUID do recurso
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Consulta mensagem e tentativas
+      tags:
+      - Mensagens
+  /messages/{id}/retry:
+    post:
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: UUID do recurso
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Message'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Reprocessa mensagem com falha
+      tags:
+      - Mensagens
+  /stores:
+    get:
+      parameters:
+      - description: Número da página
+        in: query
+        name: page
+        type: integer
+      - description: Itens por página
+        in: query
+        name: pageSize
+        type: integer
+      - description: Busca por nome ou código
+        in: query
+        name: q
+        type: string
+      - description: Estado calculado
+        in: query
+        name: status
+        type: string
+      - description: UUID do grupo
+        in: query
+        name: groupId
+        type: string
+      - description: UUID da loja
+        in: query
+        name: storeId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Page'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Lista lojas com estado recente do agente
+      tags:
+      - Lojas
+    post:
+      consumes:
+      - application/json
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: Dados da operação
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.StoreDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Store'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Cria loja
+      tags:
+      - Lojas
+  /stores/{id}:
+    get:
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: UUID do recurso
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.StoreView'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Consulta detalhes e métricas da loja
+      tags:
+      - Lojas
+  /sync/jobs:
+    get:
+      parameters:
+      - description: Número da página
+        in: query
+        name: page
+        type: integer
+      - description: Itens por página
+        in: query
+        name: pageSize
+        type: integer
+      - description: Status da carga
+        in: query
+        name: status
+        type: string
+      - description: UUID do grupo
+        in: query
+        name: groupId
+        type: string
+      - description: UUID da loja
+        in: query
+        name: storeId
+        type: string
+      - description: UUID da loja de origem
+        in: query
+        name: originStoreId
+        type: string
+      - description: UUID da loja de destino
+        in: query
+        name: destinationStoreId
+        type: string
+      - description: Data inicial
+        in: query
+        name: from
+        type: string
+      - description: Data final
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Page'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Lista cargas de sincronização
+      tags:
+      - Cargas
+    post:
+      consumes:
+      - application/json
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: Dados da operação
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.JobDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SyncJob'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Inicia carga e instrui agente origem
+      tags:
+      - Cargas
+  /sync/jobs/{id}:
+    get:
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: UUID do recurso
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SyncJob'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Consulta progresso da carga
+      tags:
+      - Cargas
+  /sync/jobs/{id}/batches:
+    get:
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: UUID do recurso
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Paginação
+        in: query
+        name: page
+        type: integer
+      - description: Paginação
+        in: query
+        name: pageSize
+        type: integer
+      - description: Filtro opcional
+        in: query
+        name: q
+        type: string
+      - description: Filtro opcional
+        in: query
+        name: status
+        type: string
+      - description: Filtro opcional
+        in: query
+        name: groupId
+        type: string
+      - description: Filtro opcional
+        in: query
+        name: storeId
+        type: string
+      - description: Filtro opcional
+        in: query
+        name: originStoreId
+        type: string
+      - description: Filtro opcional
+        in: query
+        name: destinationStoreId
+        type: string
+      - description: Filtro opcional
+        in: query
+        name: operation
+        type: string
+      - description: Filtro opcional
+        in: query
+        name: from
+        type: string
+      - description: Filtro opcional
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Page'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Lista lotes ou erros da carga
+      tags:
+      - Cargas
+  /sync/jobs/{id}/cancel:
+    post:
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: UUID do recurso
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SyncJob'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Cancela carga sem lote em processamento
+      tags:
+      - Cargas
+  /sync/jobs/{id}/errors:
+    get:
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: UUID do recurso
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Paginação
+        in: query
+        name: page
+        type: integer
+      - description: Paginação
+        in: query
+        name: pageSize
+        type: integer
+      - description: Filtro opcional
+        in: query
+        name: q
+        type: string
+      - description: Filtro opcional
+        in: query
+        name: status
+        type: string
+      - description: Filtro opcional
+        in: query
+        name: groupId
+        type: string
+      - description: Filtro opcional
+        in: query
+        name: storeId
+        type: string
+      - description: Filtro opcional
+        in: query
+        name: originStoreId
+        type: string
+      - description: Filtro opcional
+        in: query
+        name: destinationStoreId
+        type: string
+      - description: Filtro opcional
+        in: query
+        name: operation
+        type: string
+      - description: Filtro opcional
+        in: query
+        name: from
+        type: string
+      - description: Filtro opcional
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Page'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Lista lotes ou erros da carga
+      tags:
+      - Cargas
+  /sync/jobs/{id}/restart:
+    post:
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: UUID do recurso
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SyncJob'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Refaz carga finalizada em novo job
+      tags:
+      - Cargas
+  /transfers:
+    get:
+      parameters:
+      - description: Número da página
+        in: query
+        name: page
+        type: integer
+      - description: Itens por página
+        in: query
+        name: pageSize
+        type: integer
+      - description: Número da transferência
+        in: query
+        name: q
+        type: string
+      - description: Status da transferência
+        in: query
+        name: status
+        type: string
+      - description: UUID do grupo
+        in: query
+        name: groupId
+        type: string
+      - description: UUID da loja
+        in: query
+        name: storeId
+        type: string
+      - description: UUID da loja de origem
+        in: query
+        name: originStoreId
+        type: string
+      - description: UUID da loja de destino
+        in: query
+        name: destinationStoreId
+        type: string
+      - description: Data inicial
+        in: query
+        name: from
+        type: string
+      - description: Data final
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Page'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Lista transferências
+      tags:
+      - Transferências
+  /transfers/{id}:
+    get:
+      description: Operação isolada por empresa. Identidade e autorização validadas
+        pelo servidor.
+      parameters:
+      - description: UUID do recurso
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Consulta transferência, itens e timeline
+      tags:
+      - Transferências
+  /transfers/{id}/retry:
+    post:
+      description: Cria uma nova tentativa preservando transferência e itens originais.
+      parameters:
+      - description: UUID da transferência
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Message'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.AppError'
+      security:
+      - BearerAuth: []
+      summary: Reenvia transferência após corrigir o catálogo de destino
+      tags:
+      - Transferências
+securityDefinitions:
+  AgentAPIKey:
+    description: Per-agent fixed key shown once at provisioning or rotation.
+    in: header
+    name: X-API-Key
+    type: apiKey
+  BearerAuth:
+    description: Bearer token obtained from /auth/login.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

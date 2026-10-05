@@ -1,0 +1,23 @@
+ALTER TABLE transferencia
+    ADD COLUMN cnpj_origem VARCHAR(20) NOT NULL DEFAULT '',
+    ADD COLUMN cnpj_destino VARCHAR(20) NOT NULL DEFAULT '',
+    ADD COLUMN usuario_remetente VARCHAR(100) NOT NULL DEFAULT '',
+    ADD COLUMN observacao_remetente VARCHAR(2000) NOT NULL DEFAULT '',
+    ADD COLUMN data_envio TIMESTAMP;
+
+ALTER TABLE transferencia_item
+    ADD COLUMN preco_venda NUMERIC(18,4) NOT NULL DEFAULT 0 CHECK (preco_venda >= 0),
+    ADD COLUMN preco_custo NUMERIC(18,4) NOT NULL DEFAULT 0 CHECK (preco_custo >= 0),
+    ADD COLUMN codigo_lote VARCHAR(100) NOT NULL DEFAULT '',
+    ADD COLUMN lote_serial VARCHAR(100) NOT NULL DEFAULT '',
+    ADD COLUMN lot VARCHAR(100) NOT NULL DEFAULT '',
+    ADD COLUMN serial VARCHAR(100) NOT NULL DEFAULT '',
+    ADD COLUMN data_validade DATE,
+    ADD COLUMN data_fabricacao DATE,
+    ADD COLUMN controlled BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN tracks_batch BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN tracks_serial BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN registro_ms VARCHAR(100) NOT NULL DEFAULT '',
+    ADD COLUMN classe_terapeutica VARCHAR(100) NOT NULL DEFAULT '',
+    ADD COLUMN tipo_produto_sngpc VARCHAR(50) NOT NULL DEFAULT '',
+    ADD COLUMN unidade_sngpc VARCHAR(20) NOT NULL DEFAULT '';

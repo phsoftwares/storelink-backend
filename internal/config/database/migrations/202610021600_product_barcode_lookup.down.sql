@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS idx_produto_codigo_barras_normalized_lookup;
+DROP INDEX IF EXISTS idx_produto_sku_normalized_lookup;

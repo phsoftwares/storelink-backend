@@ -1,0 +1,39 @@
+# Environment files; keep safe templates
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Local data, caches, logs, and temporary files
+.local/
+.cache/
+/tmp/
+/logs/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.log
+*.log.*
+/codex_*_tmp.go
+/$coverFile
+
+# Go build, test, and profile artifacts
+/bin/
+/build/
+/coverage
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+*.prof
+*.pprof
+
+# Editor and operating system files
+.idea/
+.fleet/
+.DS_Store
+Thumbs.db
