@@ -12,7 +12,7 @@ import (
 
 func New(service *services.Service) *gin.Engine {
 	router := gin.New()
-	router.Use(gin.Recovery(), middlewares.Security(service.Config.AllowedOrigin))
+	router.Use(gin.Logger(), gin.Recovery(), middlewares.Security(service.Config.AllowedOrigin))
 	_ = router.SetTrustedProxies(nil)
 	c := controllers.New(service)
 	api := router.Group("/api")

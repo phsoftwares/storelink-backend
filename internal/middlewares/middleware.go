@@ -1,6 +1,11 @@
 package middlewares
 
 import (
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/phsoftwares/storelink-backend/internal/auth"
@@ -8,10 +13,6 @@ import (
 	"github.com/phsoftwares/storelink-backend/internal/models"
 	"github.com/phsoftwares/storelink-backend/internal/repositories"
 	"github.com/phsoftwares/storelink-backend/internal/services"
-	"net/http"
-	"strings"
-	"sync"
-	"time"
 )
 
 func Auth(s *services.Service, kind string, tenantRequired bool) gin.HandlerFunc {
