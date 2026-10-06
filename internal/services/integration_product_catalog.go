@@ -43,6 +43,7 @@ type agentProductSnapshot struct {
 	NomeFantasiaFornecedor        string                `json:"nomeFantasiaFornecedor,omitempty"`
 	Tipo                          string                `json:"tipo,omitempty"`
 	FarmaciaControlado            string                `json:"farmaciaControlado,omitempty"`
+	FarmaciaApresentacao          int64                 `json:"farmaciaApresentacao,omitempty"`
 	FarmaciaRegistroMedicamento   string                `json:"farmaciaRegistroMedicamento,omitempty"`
 	Apresentacao                  string                `json:"apresentacao,omitempty"`
 	CodigoOriginal                string                `json:"codigoOriginal,omitempty"`
@@ -65,6 +66,7 @@ type agentProductSnapshot struct {
 	AliquotaEfetivaIBS            float64               `json:"aliquotaEfetivaIbs,omitempty"`
 	AliquotaEfetivaCBS            float64               `json:"aliquotaEfetivaCbs,omitempty"`
 	ObsReformaTributaria          string                `json:"obsReformaTributaria,omitempty"`
+	PrecoVenda                    float64               `json:"precoVenda,omitempty"`
 	PrecoVenda1                   float64               `json:"precoVenda1,omitempty"`
 	PrecoVenda2                   float64               `json:"precoVenda2,omitempty"`
 	PrecoVenda3                   float64               `json:"precoVenda3,omitempty"`
@@ -171,6 +173,7 @@ func decodeProductSnapshot(raw models.JSON) (models.ProductSnapshot, error) {
 		NomeFornecedor: value.NomeFornecedor, CNPJFornecedor: value.CNPJFornecedor,
 		NomeFantasiaFornecedor: value.NomeFantasiaFornecedor, Tipo: value.Tipo,
 		FarmaciaControlado:          value.FarmaciaControlado,
+		FarmaciaApresentacao:        value.FarmaciaApresentacao,
 		FarmaciaRegistroMedicamento: value.FarmaciaRegistroMedicamento,
 		Apresentacao:                value.Apresentacao, CodigoOriginal: value.CodigoOriginal,
 		CSOSN: value.CSOSN, UsaLote: value.UsaLote, UsaBalanca: value.UsaBalanca,
@@ -184,6 +187,7 @@ func decodeProductSnapshot(raw models.JSON) (models.ProductSnapshot, error) {
 		AliquotaEfetivaIBS:   value.AliquotaEfetivaIBS,
 		AliquotaEfetivaCBS:   value.AliquotaEfetivaCBS,
 		ObsReformaTributaria: value.ObsReformaTributaria,
+		PrecoVenda:           value.PrecoVenda,
 		PrecoVenda1:          value.PrecoVenda1, PrecoVenda2: value.PrecoVenda2,
 		PrecoVenda3: value.PrecoVenda3, PrecoVenda4: value.PrecoVenda4,
 		PrecoVenda5: value.PrecoVenda5, PrecoPromocao: value.PrecoPromocao,
@@ -243,6 +247,7 @@ func toAgentProductSnapshot(snapshot models.ProductSnapshot) agentProductSnapsho
 		NomeFornecedor: snapshot.NomeFornecedor, CNPJFornecedor: snapshot.CNPJFornecedor,
 		NomeFantasiaFornecedor: snapshot.NomeFantasiaFornecedor, Tipo: snapshot.Tipo,
 		FarmaciaControlado:          snapshot.FarmaciaControlado,
+		FarmaciaApresentacao:        snapshot.FarmaciaApresentacao,
 		FarmaciaRegistroMedicamento: snapshot.FarmaciaRegistroMedicamento,
 		Apresentacao:                snapshot.Apresentacao, CodigoOriginal: snapshot.CodigoOriginal,
 		CSOSN: snapshot.CSOSN, UsaLote: snapshot.UsaLote, UsaBalanca: snapshot.UsaBalanca,
@@ -256,6 +261,7 @@ func toAgentProductSnapshot(snapshot models.ProductSnapshot) agentProductSnapsho
 		AliquotaEfetivaIBS:   snapshot.AliquotaEfetivaIBS,
 		AliquotaEfetivaCBS:   snapshot.AliquotaEfetivaCBS,
 		ObsReformaTributaria: snapshot.ObsReformaTributaria,
+		PrecoVenda:           snapshot.PrecoVenda,
 		PrecoVenda1:          snapshot.PrecoVenda1, PrecoVenda2: snapshot.PrecoVenda2,
 		PrecoVenda3: snapshot.PrecoVenda3, PrecoVenda4: snapshot.PrecoVenda4,
 		PrecoVenda5: snapshot.PrecoVenda5, PrecoPromocao: snapshot.PrecoPromocao,
@@ -372,6 +378,7 @@ func canonicalizeProductSnapshot(r *repositories.TenantRepository, storeID uuid.
 		NomeFornecedor: snapshot.NomeFornecedor, CNPJFornecedor: snapshot.CNPJFornecedor,
 		NomeFantasiaFornecedor: snapshot.NomeFantasiaFornecedor, Tipo: snapshot.Tipo,
 		FarmaciaControlado:          snapshot.FarmaciaControlado,
+		FarmaciaApresentacao:        snapshot.FarmaciaApresentacao,
 		FarmaciaRegistroMedicamento: snapshot.FarmaciaRegistroMedicamento,
 		Apresentacao:                snapshot.Apresentacao, CodigoOriginal: snapshot.CodigoOriginal,
 		CSOSN: snapshot.CSOSN, UsaLote: snapshot.UsaLote, UsaBalanca: snapshot.UsaBalanca,
@@ -385,6 +392,7 @@ func canonicalizeProductSnapshot(r *repositories.TenantRepository, storeID uuid.
 		AliquotaEfetivaIBS:   snapshot.AliquotaEfetivaIBS,
 		AliquotaEfetivaCBS:   snapshot.AliquotaEfetivaCBS,
 		ObsReformaTributaria: snapshot.ObsReformaTributaria,
+		PrecoVenda:           snapshot.PrecoVenda,
 		PrecoVenda1:          snapshot.PrecoVenda1, PrecoVenda2: snapshot.PrecoVenda2,
 		PrecoVenda3: snapshot.PrecoVenda3, PrecoVenda4: snapshot.PrecoVenda4,
 		PrecoVenda5: snapshot.PrecoVenda5, PrecoPromocao: snapshot.PrecoPromocao,

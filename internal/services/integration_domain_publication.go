@@ -55,11 +55,8 @@ func domainString(payload map[string]interface{}, names ...string) string {
 	return ""
 }
 
-func (s *Service) PublishDomain(ctx context.Context, identity models.Identity, request models.DomainPublicationDTO) (models.DomainPublicationResult, error) {
+func (s *Service) publishDomainInTransaction(r *repositories.TenantRepository, identity models.Identity, request models.DomainPublicationDTO) (models.DomainPublicationResult, error) {
 	result := models.DomainPublicationResult{}
-	if !identity.IsAgent() || identity.StoreID == uuid.Nil {
-		return result, models.Error(403, "Integracoes de loja exigem uma credencial de loja")
-	}
 	canonicalEntity, operation, err := domainPublicationOperation(request.Entity, request.Event)
 	if err != nil {
 		return result, err
@@ -96,53 +93,66 @@ func (s *Service) PublishDomain(ctx context.Context, identity models.Identity, r
 	}
 	payloadJSON := models.ToJSON(payload)
 
-	err = s.Repo.Atomic(ctx, identity.CompanyID, func(r *repositories.TenantRepository) error {
-		policyEntity := strings.ToLower(canonicalEntity)
-		if canonicalEntity == "AGREEMENT" {
-			policyEntity = "customer"
+	policyEntity := strings.ToLower(canonicalEntity)
+	if canonicalEntity == "AGREEMENT" {
+		policyEntity = "customer"
+	}
+	if err := requireStoreIntegration(r, identity, policyEntity); err != nil {
+		return result, err
+	}
+	group, err := groupForIdentity(r, identity)
+	if err != nil {
+		return result, err
+	}
+	destinations, err := publicationDestinations(r, identity, request.DestinationStoreIDs)
+	if err != nil {
+		return result, err
+	}
+	for _, destination := range destinations {
+		if _, err := route(r, identity.StoreID, destination.ID); err != nil {
+			return result, err
 		}
-		if err := requireStoreIntegration(r, identity, policyEntity); err != nil {
-			return err
+		if err := requireMessageIntegration(group, operation, payloadJSON); err != nil {
+			return result, err
 		}
-		group, err := groupForIdentity(r, identity)
+		messageID := uuid.NewSHA1(uuid.Nil, []byte(result.ID.String()+"|"+destination.ID.String()+"|"+result.HashPayload))
+		message := models.Message{Tenant: models.NewTenant(r.CompanyID()), Type: "EVENT", Operation: operation,
+			OriginStoreID: identity.StoreID, DestinationStoreID: destination.ID, Payload: payloadJSON, Status: "PENDING"}
+		message.ID = messageID
+		var existing models.Message
+		findErr := r.Find(&existing, messageID, false)
+		if findErr == nil {
+			if existing.Operation != operation || existing.OriginStoreID != identity.StoreID || existing.DestinationStoreID != destination.ID || !sameJSON(existing.Payload, payloadJSON) {
+				return result, models.Error(409, "ID de publicacao ja utilizado com outro conteudo")
+			}
+			continue
+		}
+		if !repositories.IsNotFound(findErr) {
+			return result, findErr
+		}
+		created, err := r.InsertUnique(&message)
 		if err != nil {
-			return err
+			return result, err
 		}
-		destinations, err := publicationDestinations(r, identity, request.DestinationStoreIDs)
-		if err != nil {
-			return err
+		if created {
+			result.DestinationsQueued++
 		}
-		for _, destination := range destinations {
-			if _, err := route(r, identity.StoreID, destination.ID); err != nil {
-				return err
-			}
-			if err := requireMessageIntegration(group, operation, payloadJSON); err != nil {
-				return err
-			}
-			messageID := uuid.NewSHA1(uuid.Nil, []byte(result.ID.String()+"|"+destination.ID.String()+"|"+result.HashPayload))
-			message := models.Message{Tenant: models.NewTenant(r.CompanyID()), Type: "EVENT", Operation: operation,
-				OriginStoreID: identity.StoreID, DestinationStoreID: destination.ID, Payload: payloadJSON, Status: "PENDING"}
-			message.ID = messageID
-			var existing models.Message
-			findErr := r.Find(&existing, messageID, false)
-			if findErr == nil {
-				if existing.Operation != operation || existing.OriginStoreID != identity.StoreID || existing.DestinationStoreID != destination.ID || !sameJSON(existing.Payload, payloadJSON) {
-					return models.Error(409, "ID de publicacao ja utilizado com outro conteudo")
-				}
-				continue
-			}
-			if !repositories.IsNotFound(findErr) {
-				return findErr
-			}
-			created, err := r.InsertUnique(&message)
-			if err != nil {
-				return err
-			}
-			if created {
-				result.DestinationsQueued++
-			}
-		}
-		return audit(r, identity, operation, &identity.StoreID, map[string]interface{}{"publicationId": result.ID, "entity": canonicalEntity, "destinationsQueued": result.DestinationsQueued})
+	}
+	if err := audit(r, identity, operation, &identity.StoreID, map[string]interface{}{"publicationId": result.ID, "entity": canonicalEntity, "destinationsQueued": result.DestinationsQueued}); err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
+func (s *Service) PublishDomain(ctx context.Context, identity models.Identity, request models.DomainPublicationDTO) (models.DomainPublicationResult, error) {
+	if !identity.IsAgent() || identity.StoreID == uuid.Nil {
+		return models.DomainPublicationResult{}, models.Error(403, "Integracoes de loja exigem uma credencial de loja")
+	}
+	var result models.DomainPublicationResult
+	err := s.Repo.Atomic(ctx, identity.CompanyID, func(r *repositories.TenantRepository) error {
+		var err error
+		result, err = s.publishDomainInTransaction(r, identity, request)
+		return err
 	})
 	if err != nil {
 		return models.DomainPublicationResult{}, err
@@ -151,22 +161,32 @@ func (s *Service) PublishDomain(ctx context.Context, identity models.Identity, r
 }
 
 // PublishDomains is deliberately idempotent per item. A retry of the HTTP
-// request therefore reuses the deterministic publication/message identities,
-// while one request removes the per-record network round trip that made a
-// full customer load unnecessarily slow. The single-item service remains the
-// source of truth for validation and canonicalization.
+// request therefore reuses the deterministic publication/message identities.
+// All items in one request share a database transaction: a validation, routing
+// or constraint error rolls the complete batch back instead of leaving only a
+// prefix of a customer/employee publication committed. The single-item
+// service remains the source of truth for validation and canonicalization.
 func (s *Service) PublishDomains(ctx context.Context, identity models.Identity, requests []models.DomainPublicationDTO) (models.DomainPublicationBatchResult, error) {
 	result := models.DomainPublicationBatchResult{Items: make([]models.DomainPublicationResult, 0, len(requests))}
 	if len(requests) < 1 || len(requests) > 1000 {
 		return result, models.Error(400, "O lote deve conter de 1 a 1000 publicacoes")
 	}
-	for _, request := range requests {
-		item, err := s.PublishDomain(ctx, identity, request)
-		if err != nil {
-			return models.DomainPublicationBatchResult{}, err
-		}
-		result.Items = append(result.Items, item)
+	if !identity.IsAgent() || identity.StoreID == uuid.Nil {
+		return models.DomainPublicationBatchResult{}, models.Error(403, "Integracoes de loja exigem uma credencial de loja")
 	}
-	result.ProcessedCount = len(result.Items)
+	err := s.Repo.Atomic(ctx, identity.CompanyID, func(r *repositories.TenantRepository) error {
+		for _, request := range requests {
+			item, err := s.publishDomainInTransaction(r, identity, request)
+			if err != nil {
+				return err
+			}
+			result.Items = append(result.Items, item)
+		}
+		result.ProcessedCount = len(result.Items)
+		return nil
+	})
+	if err != nil {
+		return models.DomainPublicationBatchResult{}, err
+	}
 	return result, nil
 }

@@ -1,0 +1,2 @@
+ALTER TABLE produto
+    ADD COLUMN preco_venda NUMERIC(18,6) NOT NULL DEFAULT 0;

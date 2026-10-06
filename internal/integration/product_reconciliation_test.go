@@ -29,6 +29,8 @@ func productPublicationBatch(start, count, storeNumber int) []models.ProductPubl
 			}},
 		}
 		if index == 0 && storeNumber == 1 {
+			product.PrecoVenda = amount
+			product.FarmaciaApresentacao = 123
 			product.NCM = "12345678"
 			product.CEST = "1234567"
 			product.ClassificacaoFiscal = "FISCAL-01"
@@ -182,7 +184,7 @@ func TestProductCodeReconciliationFromIndependentStores(t *testing.T) {
 	if err := h.db.Where("nome = ?", "Produto loja 1 01").First(&persisted).Error; err != nil {
 		t.Fatal(err)
 	}
-	if persisted.NCM != "12345678" || persisted.CEST != "1234567" || persisted.ClassificacaoFiscal != "FISCAL-01" || persisted.CST != "060" || persisted.FarmaciaControlado != "S" || persisted.CodigoOriginal != "ORIG-01" || persisted.AliquotaIBS != 0.1 || persisted.ObsReformaTributaria != "Observacao" || persisted.UsaTabelaPreco != "SIM" {
+	if persisted.NCM != "12345678" || persisted.CEST != "1234567" || persisted.ClassificacaoFiscal != "FISCAL-01" || persisted.CST != "060" || persisted.FarmaciaControlado != "S" || persisted.FarmaciaApresentacao != 123 || persisted.CodigoOriginal != "ORIG-01" || persisted.AliquotaIBS != 0.1 || persisted.ObsReformaTributaria != "Observacao" || persisted.UsaTabelaPreco != "SIM" || persisted.PrecoVenda != float64(7) {
 		t.Fatalf("atributos complementares do produto nao foram persistidos: %+v", persisted)
 	}
 

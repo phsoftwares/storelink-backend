@@ -1,0 +1,2 @@
+ALTER TABLE produto
+    ADD COLUMN IF NOT EXISTS farmacia_apresentacao BIGINT NOT NULL DEFAULT 0;

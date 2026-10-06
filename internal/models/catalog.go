@@ -38,6 +38,7 @@ type ProductSnapshot struct {
 	NomeFantasiaFornecedor        string                `json:"nome_fantasia_fornecedor,omitempty"`
 	Tipo                          string                `json:"tipo,omitempty"`
 	FarmaciaControlado            string                `json:"farmacia_controlado,omitempty"`
+	FarmaciaApresentacao          int64                 `json:"farmacia_apresentacao"`
 	FarmaciaRegistroMedicamento   string                `json:"farmacia_registro_medicamento,omitempty"`
 	Apresentacao                  string                `json:"apresentacao,omitempty"`
 	CodigoOriginal                string                `json:"codigo_original,omitempty"`
@@ -60,6 +61,7 @@ type ProductSnapshot struct {
 	AliquotaEfetivaIBS            float64               `json:"aliquota_efetiva_ibs,omitempty"`
 	AliquotaEfetivaCBS            float64               `json:"aliquota_efetiva_cbs,omitempty"`
 	ObsReformaTributaria          string                `json:"obs_reforma_tributaria,omitempty"`
+	PrecoVenda                    float64               `json:"preco_venda,omitempty"`
 	PrecoVenda1                   float64               `json:"preco_venda1,omitempty"`
 	PrecoVenda2                   float64               `json:"preco_venda2,omitempty"`
 	PrecoVenda3                   float64               `json:"preco_venda3,omitempty"`
@@ -139,6 +141,7 @@ type Product struct {
 	NomeFantasiaFornecedor        string     `json:"nomeFantasiaFornecedor" gorm:"column:nome_fantasia_fornecedor"`
 	Tipo                          string     `json:"tipo"`
 	FarmaciaControlado            string     `json:"farmaciaControlado" gorm:"column:farmacia_controlado"`
+	FarmaciaApresentacao          int64      `json:"farmaciaApresentacao" gorm:"column:farmacia_apresentacao"`
 	FarmaciaRegistroMedicamento   string     `json:"farmaciaRegistroMedicamento" gorm:"column:farmacia_registro_medicamento"`
 	Apresentacao                  string     `json:"apresentacao"`
 	CodigoOriginal                string     `json:"codigoOriginal" gorm:"column:codigo_original"`
@@ -161,6 +164,7 @@ type Product struct {
 	AliquotaEfetivaIBS            float64    `json:"aliquotaEfetivaIbs" gorm:"column:aliquota_efetiva_ibs"`
 	AliquotaEfetivaCBS            float64    `json:"aliquotaEfetivaCbs" gorm:"column:aliquota_efetiva_cbs"`
 	ObsReformaTributaria          string     `json:"obsReformaTributaria" gorm:"column:obs_reforma_tributaria"`
+	PrecoVenda                    float64    `json:"precoVenda" gorm:"column:preco_venda"`
 	PrecoVenda1                   float64    `json:"precoVenda1" gorm:"column:preco_venda1"`
 	PrecoVenda2                   float64    `json:"precoVenda2" gorm:"column:preco_venda2"`
 	PrecoVenda3                   float64    `json:"precoVenda3" gorm:"column:preco_venda3"`
