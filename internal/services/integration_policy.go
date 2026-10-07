@@ -22,6 +22,8 @@ func requireGroupIntegration(group models.Group, capability string) error {
 		enabled, label = group.IntegrarClientes, "clientes"
 	case "employees":
 		enabled, label = group.IntegrarFuncionarios, "funcion\u00e1rios e operadores de caixa"
+	case "users":
+		enabled, label = group.IntegrarUsuarios, "usu\u00e1rios e permiss\u00f5es"
 	default:
 		return nil
 	}
@@ -45,6 +47,11 @@ func requireEntityIntegration(group models.Group, entity string) error {
 		return requireGroupIntegration(group, "customers")
 	case "employee", "cashier_operator":
 		return requireGroupIntegration(group, "employees")
+	case "usercontrol_usuario", "usercontrol_user", "usercontrol_direito",
+		"usercontrol_direito_extra", "usercontrol_right", "usercontrol_right_extra":
+		return requireGroupIntegration(group, "users")
+	case "users":
+		return requireGroupIntegration(group, "users")
 	default:
 		return nil
 	}
@@ -78,6 +85,10 @@ func requireMessageIntegration(group models.Group, operation string, payload mod
 		return requireGroupIntegration(group, "customers")
 	case strings.HasPrefix(operation, "employee."), strings.HasPrefix(operation, "cashier_operator."):
 		return requireGroupIntegration(group, "employees")
+	case strings.HasPrefix(operation, "usercontrol_user."),
+		strings.HasPrefix(operation, "usercontrol_right."),
+		strings.HasPrefix(operation, "usercontrol_right_extra."):
+		return requireGroupIntegration(group, "users")
 	default:
 		return nil
 	}

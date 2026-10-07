@@ -672,11 +672,11 @@ func TestGroupIntegrationSettingsGateMessagesAndSyncJobs(t *testing.T) {
 	for _, invalidBoolean := range []interface{}{"S", "N", 0, 1} {
 		h.statusRequest("PUT", "/api/groups/"+group, map[string]interface{}{"nome": "Rede com configuraÃƒÂ§ÃƒÂ£o", "integrar_clientes": invalidBoolean}, admin, company, http.StatusBadRequest)
 	}
-	if status != 200 || current["integrarPrecos"] != true || current["integrarProdutos"] != true || current["integrarClientes"] != true || current["integrarFuncionarios"] != true {
+	if status != 200 || current["integrarPrecos"] != true || current["integrarProdutos"] != true || current["integrarClientes"] != true || current["integrarFuncionarios"] != true || current["integrarUsuarios"] != true {
 		t.Fatalf("novo grupo deve preservar integraÃ§Ãµes habilitadas: HTTP %d %#v", status, current)
 	}
 
-	for _, operation := range []string{"product_group.updated", "product_subgroup.updated", "price.updated", "customer.created", "employee.created"} {
+	for _, operation := range []string{"product_group.updated", "product_subgroup.updated", "price.updated", "customer.created", "employee.created", "usercontrol_user.updated"} {
 		status, result := h.request("POST", "/api/agent/messages", map[string]interface{}{"id": uuid.NewString(), "type": "EVENT", "operation": operation, "destination_store_id": destination, "payload": map[string]string{"id": "reg-" + operation}}, originAgent, "")
 		if status != http.StatusCreated {
 			t.Fatalf("operaÃ§Ã£o %s deveria estar liberada por padrÃ£o: HTTP %d %#v", operation, status, result)
@@ -684,7 +684,7 @@ func TestGroupIntegrationSettingsGateMessagesAndSyncJobs(t *testing.T) {
 	}
 
 	falseValue := false
-	settings := models.GroupDTO{Nome: "Rede com configuraÃ§Ã£o", IntegrarPrecos: &falseValue, IntegrarProdutos: &falseValue, IntegrarClientes: &falseValue, IntegrarFuncionarios: &falseValue}
+	settings := models.GroupDTO{Nome: "Rede com configuraÃ§Ã£o", IntegrarPrecos: &falseValue, IntegrarProdutos: &falseValue, IntegrarClientes: &falseValue, IntegrarFuncionarios: &falseValue, IntegrarUsuarios: &falseValue}
 	settings.IntegrarGruposSubgrupos = &falseValue
 	h.statusRequest("PUT", "/api/groups/"+group, settings, admin, company, http.StatusOK)
 	price := models.ProductPriceSnapshot{LocalCode: "P-ANY", Kind: "SALE", Quantity: 1, Amount: floatPointer(10), Active: &falseValue}
@@ -692,18 +692,18 @@ func TestGroupIntegrationSettingsGateMessagesAndSyncJobs(t *testing.T) {
 		t.Fatalf("integraÃ§Ã£o direta de preÃ§os deve respeitar a configuraÃ§Ã£o do grupo, HTTP %d", status)
 	}
 	status, current = h.request("GET", "/api/groups/"+group, nil, admin, company)
-	if status != 200 || current["integrarPrecos"] != false || current["integrarProdutos"] != false || current["integrarGruposSubgrupos"] != false || current["integrarClientes"] != false || current["integrarFuncionarios"] != false {
+	if status != 200 || current["integrarPrecos"] != false || current["integrarProdutos"] != false || current["integrarGruposSubgrupos"] != false || current["integrarClientes"] != false || current["integrarFuncionarios"] != false || current["integrarUsuarios"] != false {
 		t.Fatalf("configuraÃ§Ã£o atualizada nÃ£o foi persistida: HTTP %d %#v", status, current)
 	}
 	trueValue := true
 	h.statusRequest("PUT", "/api/groups/"+group, models.GroupDTO{Nome: "Rede com configuraÃ§Ã£o", IntegrarClientes: &trueValue}, admin, company, http.StatusOK)
 	status, current = h.request("GET", "/api/groups/"+group, nil, admin, company)
-	if status != 200 || current["integrarPrecos"] != false || current["integrarProdutos"] != false || current["integrarClientes"] != true {
+	if status != 200 || current["integrarPrecos"] != false || current["integrarProdutos"] != false || current["integrarClientes"] != true || current["integrarUsuarios"] != false {
 		t.Fatalf("atualizaÃ§Ã£o parcial alterou opÃ§Ãµes omitidas: HTTP %d %#v", status, current)
 	}
 	h.statusRequest("PUT", "/api/groups/"+group, models.GroupDTO{Nome: "Rede com configuraÃ§Ã£o", IntegrarClientes: &falseValue}, admin, company, http.StatusOK)
 
-	for _, operation := range []string{"product.updated", "product_group.created", "product_subgroup.disabled", "price.updated", "customer.disabled", "employee.updated"} {
+	for _, operation := range []string{"product.updated", "product_group.created", "product_subgroup.disabled", "price.updated", "customer.disabled", "employee.updated", "usercontrol_user.updated"} {
 		status, result := h.request("POST", "/api/agent/messages", map[string]interface{}{"id": uuid.NewString(), "type": "EVENT", "operation": operation, "destination_store_id": destination, "payload": map[string]string{"id": "blocked-" + operation}}, originAgent, "")
 		if status != http.StatusConflict {
 			t.Fatalf("operaÃ§Ã£o %s deveria respeitar integraÃ§Ã£o desativada: HTTP %d %#v", operation, status, result)
@@ -724,9 +724,10 @@ func TestGroupIntegrationSettingsGateMessagesAndSyncJobs(t *testing.T) {
 	settings.IntegrarProdutos = &trueValue
 	settings.IntegrarClientes = &trueValue
 	settings.IntegrarFuncionarios = &trueValue
+	settings.IntegrarUsuarios = &trueValue
 	h.statusRequest("PUT", "/api/groups/"+group, settings, admin, company, http.StatusOK)
 	queued := claim(h, destinationAgent, 10)
-	if len(queued) != 5 {
+	if len(queued) != 6 {
 		t.Fatalf("mensagens devem voltar Ã  fila ao reabilitar o grupo: recebeu %d", len(queued))
 	}
 	for _, message := range queued {

@@ -5176,6 +5176,9 @@ const docTemplate = `{
                 "integrarFuncionarios": {
                     "type": "boolean"
                 },
+                "integrarUsuarios": {
+                    "type": "boolean"
+                },
                 "integrarPrecos": {
                     "type": "boolean"
                 },
@@ -5203,6 +5206,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "integrarFuncionarios": {
+                    "type": "boolean"
+                },
+                "integrarUsuarios": {
                     "type": "boolean"
                 },
                 "integrarPrecos": {

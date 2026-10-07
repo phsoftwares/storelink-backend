@@ -28,6 +28,7 @@ type GroupDTO struct {
 	IntegrarGruposSubgrupos *bool  `json:"integrarGruposSubgrupos"`
 	IntegrarClientes        *bool  `json:"integrarClientes"`
 	IntegrarFuncionarios    *bool  `json:"integrarFuncionarios"`
+	IntegrarUsuarios        *bool  `json:"integrarUsuarios"`
 }
 type StoreDTO struct {
 	GroupID uuid.UUID `json:"groupId" binding:"required"`

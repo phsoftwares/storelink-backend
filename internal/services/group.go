@@ -20,7 +20,7 @@ func (s *Service) ListGroups(ctx context.Context, i models.Identity, filter repo
 }
 
 func (s *Service) Group(ctx context.Context, i models.Identity, id uuid.UUID, d models.GroupDTO) (models.Group, error) {
-	g := models.Group{Tenant: models.NewTenant(i.CompanyID), Nome: strings.TrimSpace(d.Nome), Ativo: true, IntegrarPrecos: true, IntegrarProdutos: true, IntegrarGruposSubgrupos: true, IntegrarClientes: true, IntegrarFuncionarios: true}
+	g := models.Group{Tenant: models.NewTenant(i.CompanyID), Nome: strings.TrimSpace(d.Nome), Ativo: true, IntegrarPrecos: true, IntegrarProdutos: true, IntegrarGruposSubgrupos: true, IntegrarClientes: true, IntegrarFuncionarios: true, IntegrarUsuarios: true}
 	if g.Nome == "" {
 		return g, models.Error(400, "Nome obrigatório")
 	}
@@ -59,6 +59,9 @@ func (s *Service) Group(ctx context.Context, i models.Identity, id uuid.UUID, d 
 		if d.IntegrarFuncionarios != nil {
 			g.IntegrarFuncionarios = *d.IntegrarFuncionarios
 		}
+		if d.IntegrarUsuarios != nil {
+			g.IntegrarUsuarios = *d.IntegrarUsuarios
+		}
 		var e error
 		if id == uuid.Nil {
 			e = r.Create(&g)
@@ -68,7 +71,7 @@ func (s *Service) Group(ctx context.Context, i models.Identity, id uuid.UUID, d 
 		if e != nil {
 			return e
 		}
-		return audit(r, i, action, nil, map[string]interface{}{"id": g.ID, "ativo": g.Ativo, "integrarPrecos": g.IntegrarPrecos, "integrarProdutos": g.IntegrarProdutos, "integrarGruposSubgrupos": g.IntegrarGruposSubgrupos, "integrarClientes": g.IntegrarClientes, "integrarFuncionarios": g.IntegrarFuncionarios})
+		return audit(r, i, action, nil, map[string]interface{}{"id": g.ID, "ativo": g.Ativo, "integrarPrecos": g.IntegrarPrecos, "integrarProdutos": g.IntegrarProdutos, "integrarGruposSubgrupos": g.IntegrarGruposSubgrupos, "integrarClientes": g.IntegrarClientes, "integrarFuncionarios": g.IntegrarFuncionarios, "integrarUsuarios": g.IntegrarUsuarios})
 	})
 	return g, e
 }

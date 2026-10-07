@@ -106,6 +106,7 @@ type Group struct {
 	IntegrarGruposSubgrupos bool   `json:"integrarGruposSubgrupos" gorm:"column:integrar_grupos_subgrupos"`
 	IntegrarClientes        bool   `json:"integrarClientes" gorm:"column:integrar_clientes"`
 	IntegrarFuncionarios    bool   `json:"integrarFuncionarios" gorm:"column:integrar_funcionarios"`
+	IntegrarUsuarios        bool   `json:"integrarUsuarios" gorm:"column:integrar_usuarios"`
 }
 
 func (Group) TableName() string { return "grupo_loja" }

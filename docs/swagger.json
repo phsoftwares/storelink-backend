@@ -5168,6 +5168,9 @@
                 "integrarFuncionarios": {
                     "type": "boolean"
                 },
+                "integrarUsuarios": {
+                    "type": "boolean"
+                },
                 "integrarPrecos": {
                     "type": "boolean"
                 },
@@ -5195,6 +5198,9 @@
                     "type": "boolean"
                 },
                 "integrarFuncionarios": {
+                    "type": "boolean"
+                },
+                "integrarUsuarios": {
                     "type": "boolean"
                 },
                 "integrarPrecos": {

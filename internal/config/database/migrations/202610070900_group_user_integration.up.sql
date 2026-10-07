@@ -1,0 +1,2 @@
+ALTER TABLE grupo_loja
+    ADD COLUMN integrar_usuarios BOOLEAN NOT NULL DEFAULT TRUE;

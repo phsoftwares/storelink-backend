@@ -179,10 +179,12 @@ func (r *TenantRepository) due(store uuid.UUID, now time.Time, limit int, operat
 			OR (m.operation IN ('price.updated','product.update_price') AND NOT grupo.integrar_precos)
 			OR (m.operation IN ('customer.created','customer.updated','customer.disabled','sync.customers') AND NOT grupo.integrar_clientes)
 			OR (m.operation IN ('employee.created','employee.updated','employee.disabled','cashier_operator.created','cashier_operator.updated','cashier_operator.disabled','sync.employees') AND NOT grupo.integrar_funcionarios)
+			OR (m.operation IN ('usercontrol_user.created','usercontrol_user.updated','usercontrol_user.disabled','usercontrol_right.created','usercontrol_right.updated','usercontrol_right.disabled','usercontrol_right_extra.created','usercontrol_right_extra.updated','usercontrol_right_extra.disabled') AND NOT grupo.integrar_usuarios)
 			OR (m.operation = 'sync.batch' AND m.payload->>'entity' = 'product' AND NOT grupo.integrar_produtos)
 			OR (m.operation = 'sync.batch' AND m.payload->>'entity' IN ('product_group','product_subgroup') AND NOT (grupo.integrar_produtos OR grupo.integrar_grupos_subgrupos))
 			OR (m.operation = 'sync.batch' AND m.payload->>'entity' = 'customer' AND NOT grupo.integrar_clientes)
 			OR (m.operation = 'sync.batch' AND m.payload->>'entity' = 'employee' AND NOT grupo.integrar_funcionarios)
+			OR (m.operation = 'sync.batch' AND m.payload->>'entity' IN ('usercontrol_usuario','usercontrol_user','usercontrol_direito','usercontrol_right','usercontrol_direito_extra','usercontrol_right_extra') AND NOT grupo.integrar_usuarios)
 		)
 	)`
 	query := r.db.Table("mensagem AS m").Select("m.*").Where("m.id_empresa = ? AND m.id_loja_destino = ? AND m.status IN ('PENDING','RETRY') AND (m.next_attempt_at IS NULL OR m.next_attempt_at <= ?)", r.company, store, now).Where(integrationEnabled)
@@ -220,6 +222,9 @@ func (r *TenantRepository) due(store uuid.UUID, now time.Time, limit int, operat
 				WHEN m.operation LIKE 'customer.%' THEN 'customer'
 				WHEN m.operation LIKE 'employee.%' THEN 'employee'
 				WHEN m.operation LIKE 'cashier_operator.%' THEN 'cashier_operator'
+				WHEN m.operation LIKE 'usercontrol_user.%' THEN 'usercontrol_user'
+				WHEN m.operation LIKE 'usercontrol_right.%' THEN 'usercontrol_right'
+				WHEN m.operation LIKE 'usercontrol_right_extra.%' THEN 'usercontrol_right_extra'
 				WHEN m.operation LIKE 'agreement.%' THEN 'agreement'
 				ELSE m.operation
 			END`
@@ -235,6 +240,9 @@ func (r *TenantRepository) due(store uuid.UUID, now time.Time, limit int, operat
 					WHEN newer.operation LIKE 'customer.%' THEN 'customer'
 					WHEN newer.operation LIKE 'employee.%' THEN 'employee'
 					WHEN newer.operation LIKE 'cashier_operator.%' THEN 'cashier_operator'
+					WHEN newer.operation LIKE 'usercontrol_user.%' THEN 'usercontrol_user'
+					WHEN newer.operation LIKE 'usercontrol_right.%' THEN 'usercontrol_right'
+					WHEN newer.operation LIKE 'usercontrol_right_extra.%' THEN 'usercontrol_right_extra'
 					WHEN newer.operation LIKE 'agreement.%' THEN 'agreement'
 					ELSE newer.operation
 				  END
