@@ -161,7 +161,7 @@ type IntegrationAckItemDTO struct {
 }
 
 type IntegrationAckBatchDTO struct {
-	Items []IntegrationAckItemDTO `json:"itens" binding:"required,min=1,max=1000"`
+	Items []IntegrationAckItemDTO `json:"itens" binding:"required,min=1,max=2000"`
 }
 
 type IntegrationAckBatchResult struct {
@@ -181,7 +181,7 @@ type IntegrationRenewItem struct {
 }
 
 type IntegrationRenewDTO struct {
-	Items []IntegrationRenewItem `json:"itens" binding:"required,min=1,max=1000"`
+	Items []IntegrationRenewItem `json:"itens" binding:"required,min=1,max=5000"`
 }
 
 type IntegrationRenewResult struct {

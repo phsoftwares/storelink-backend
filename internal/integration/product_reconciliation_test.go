@@ -21,7 +21,7 @@ func productPublicationBatch(start, count, storeNumber int) []models.ProductPubl
 		amount := float64(codeNumber) / 100
 		active := true
 		product := models.ProductSnapshot{
-			LocalCode: code, SKU: code,
+			LocalCode: code, SKU: fmt.Sprintf("SKU-%d-%s", storeNumber, code),
 			Name: fmt.Sprintf("Produto loja %d %02d", storeNumber, index+1),
 			Unit: "UN", Active: boolValue(true), TracksSerial: boolValue(false),
 			Barcodes: []models.ProductBarcodeValue{{
@@ -159,8 +159,11 @@ func TestProductCodeReconciliationFromIndependentStores(t *testing.T) {
 	}
 	sort.Ints(secondCodes)
 	for index, code := range secondCodes {
-		if code != 725+index {
-			t.Fatalf("segundo lote nao foi remapeado para o proximo intervalo livre: %v", secondCodes)
+		// codigo_local is scoped by store. A different product in the second
+		// store may keep the same local code; its canonical product UUID and
+		// store mapping keep the identities distinct.
+		if code != 700+index {
+			t.Fatalf("segundo lote perdeu os codigos locais da loja: %v", secondCodes)
 		}
 	}
 
@@ -205,6 +208,16 @@ func TestProductCodeReconciliationFromIndependentStores(t *testing.T) {
 	}
 	if storeOneMappings != 25 || storeTwoMappings != 30 {
 		t.Fatalf("mapeamentos por loja incorretos: loja1=%d loja2=%d", storeOneMappings, storeTwoMappings)
+	}
+	var mappingOne, mappingTwo models.ProductStoreMapping
+	if err := h.db.Where("id_loja = ? AND UPPER(BTRIM(codigo_local)) = ?", storeOne, "000700").First(&mappingOne).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := h.db.Where("id_loja = ? AND UPPER(BTRIM(codigo_local)) = ?", storeTwo, "000700").First(&mappingTwo).Error; err != nil {
+		t.Fatal(err)
+	}
+	if mappingOne.ProductID == mappingTwo.ProductID {
+		t.Fatal("o mesmo codigo local em lojas diferentes nao deve fundir produtos com EANs distintos")
 	}
 
 	// The first source must have queued the second store's product events, and

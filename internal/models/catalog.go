@@ -62,6 +62,7 @@ type ProductSnapshot struct {
 	AliquotaEfetivaCBS            float64               `json:"aliquota_efetiva_cbs,omitempty"`
 	ObsReformaTributaria          string                `json:"obs_reforma_tributaria,omitempty"`
 	PrecoVenda                    float64               `json:"preco_venda,omitempty"`
+	PrecoVendaInformado           bool                  `json:"preco_venda_informado,omitempty"`
 	PrecoVenda1                   float64               `json:"preco_venda1,omitempty"`
 	PrecoVenda2                   float64               `json:"preco_venda2,omitempty"`
 	PrecoVenda3                   float64               `json:"preco_venda3,omitempty"`

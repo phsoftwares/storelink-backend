@@ -65,7 +65,7 @@ func run() error {
 	if seeded {
 		slog.Info("initial administrator created", "email", c.AdminEmail)
 	}
-	srv := &http.Server{Addr: ":" + c.Port, Handler: routes.New(application), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: c.RequestTimeout, WriteTimeout: c.RequestTimeout, IdleTimeout: 60 * time.Second}
+	srv := &http.Server{Addr: c.ListenAddress, Handler: routes.New(application), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: c.RequestTimeout, WriteTimeout: c.RequestTimeout, IdleTimeout: 60 * time.Second}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	done := make(chan error, 1)

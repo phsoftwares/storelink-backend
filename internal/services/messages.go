@@ -14,6 +14,10 @@ import (
 	"github.com/phsoftwares/storelink-backend/internal/repositories"
 )
 
+// MaxIntegrationClaimBatchSize aligns the HTTP claim with the FNTS_Server
+// catalog page and keeps claim/renew operations within PostgreSQL parameter limits.
+const MaxIntegrationClaimBatchSize = 5000
+
 type IMessageService interface {
 	ListMessages(context.Context, models.Identity, repositories.Filter) (models.Page, error)
 	ListErrors(context.Context, models.Identity, repositories.Filter) (models.Page, error)
@@ -269,6 +273,9 @@ func (s *Service) ClaimOperationCoalesced(ctx context.Context, i models.Identity
 
 func (s *Service) RenewClaims(ctx context.Context, i models.Identity, d models.IntegrationRenewDTO) (models.IntegrationRenewResult, error) {
 	result := models.IntegrationRenewResult{}
+	if len(d.Items) > MaxIntegrationClaimBatchSize {
+		return result, models.Error(400, "A renovacao nao pode exceder 5000 mensagens")
+	}
 	err := s.Repo.Atomic(ctx, i.CompanyID, func(r *repositories.TenantRepository) error {
 		now := time.Now().UTC()
 		count, e := r.RenewClaims(i.StoreID, now, s.Config.Lease, d.Items)
@@ -286,8 +293,8 @@ func (s *Service) claim(ctx context.Context, i models.Identity, limit int, opera
 	if limit < 1 {
 		limit = 25
 	}
-	if limit > 1000 {
-		limit = 1000
+	if limit > MaxIntegrationClaimBatchSize {
+		limit = MaxIntegrationClaimBatchSize
 	}
 	out := []models.Message{}
 	err := s.Repo.Atomic(ctx, i.CompanyID, func(r *repositories.TenantRepository) error {
@@ -314,6 +321,10 @@ func (s *Service) claim(ctx context.Context, i models.Identity, limit int, opera
 				return e
 			}
 		}
+		if len(out) == 0 {
+			return nil
+		}
+		attempts := make([]models.Attempt, 0, len(out))
 		for idx := range out {
 			m := &out[idx]
 			token := uuid.New()
@@ -324,13 +335,18 @@ func (s *Service) claim(ctx context.Context, i models.Identity, limit int, opera
 			m.LeaseUntil = &lease
 			m.LastAttemptAt = &now
 			m.NextAttemptAt = nil
-			if e := r.Save(m, m.ID); e != nil {
-				return e
-			}
-			a := models.Attempt{Tenant: models.NewTenant(i.CompanyID), MessageID: m.ID, AgentID: i.AgentID, ClaimToken: token, Status: "PROCESSING", StartedAt: now}
-			if e := r.Create(&a); e != nil {
-				return e
-			}
+			m.UpdatedAt = now
+			attempts = append(attempts, models.Attempt{
+				Tenant: models.NewTenant(i.CompanyID), MessageID: m.ID,
+				AgentID: i.AgentID, ClaimToken: token,
+				Status: "PROCESSING", StartedAt: now,
+			})
+		}
+		if err := r.ClaimMessagesBulk(i.StoreID, now, now.Add(s.Config.Lease), out); err != nil {
+			return err
+		}
+		if err := r.CreateMany(&attempts, 1000); err != nil {
+			return err
 		}
 		return nil
 	})
@@ -399,7 +415,10 @@ func (s *Service) Ack(ctx context.Context, i models.Identity, id uuid.UUID, d mo
 
 func (s *Service) AckBatch(ctx context.Context, i models.Identity, d models.IntegrationAckBatchDTO) (models.IntegrationAckBatchResult, error) {
 	result := models.IntegrationAckBatchResult{}
-	if len(d.Items) == 0 || len(d.Items) > 1000 {
+	if len(d.Items) > 2000 {
+		return result, models.Error(400, "Batch confirmation cannot exceed 2000 messages")
+	}
+	if len(d.Items) == 0 {
 		return result, models.Error(400, "O lote de confirmaÃ§Ã£o deve conter de 1 a 1000 mensagens")
 	}
 	err := s.Repo.Atomic(ctx, i.CompanyID, func(r *repositories.TenantRepository) error {

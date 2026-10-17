@@ -109,27 +109,27 @@ func (c *AgentProtocolController) Pending(ctx *gin.Context) {
 // @Produce json
 // @Security AgentAPIKey
 // @Param X-Agent-ID header string true "Store credential ID"
-// @Param limit query int false "Quantidade de 1 a 1000"
-// @Param operation query string false "Prefixo da operação"
+// @Param limit query int false "Quantidade de 1 a 5000"
 // @Success 200 {object} map[string][]models.Message
 // @Failure 400,401,403,404,409,429,500 {object} models.AppError
 // @Router /integracao/v1/mensagens/pendentes [get]
 func (c *AgentProtocolController) IntegrationPending(ctx *gin.Context) {
+	// @Param operation query string false "Prefixo da operação"
 	limit := 25
 	if raw := ctx.Query("limite"); raw == "" {
 		raw = ctx.Query("limit")
 		if raw != "" {
 			value, err := strconv.Atoi(raw)
-			if err != nil || value < 1 || value > 1000 {
-				HandleError(ctx, models.Error(400, "Limite deve ser de 1 a 1000"))
+			if err != nil || value < 1 || value > services.MaxIntegrationClaimBatchSize {
+				HandleError(ctx, models.Error(400, "Limite deve ser de 1 a 5000"))
 				return
 			}
 			limit = value
 		}
 	} else {
 		value, err := strconv.Atoi(raw)
-		if err != nil || value < 1 || value > 1000 {
-			HandleError(ctx, models.Error(400, "Limite deve ser de 1 a 1000"))
+		if err != nil || value < 1 || value > services.MaxIntegrationClaimBatchSize {
+			HandleError(ctx, models.Error(400, "Limite deve ser de 1 a 5000"))
 			return
 		}
 		limit = value

@@ -9,12 +9,12 @@ import (
 )
 
 type Config struct {
-	DatabaseURL, JWTSecret, Port, AllowedOrigin string
-	AdminEmail, AdminPassword, AdminName        string
-	Lease, OfflineAfter, RequestTimeout         time.Duration
-	MaxAttempts, DefaultBatchSize               int
-	RetryDelays                                 []time.Duration
-	Swagger                                     bool
+	DatabaseURL, JWTSecret, Port, ListenAddress, AllowedOrigin string
+	AdminEmail, AdminPassword, AdminName                       string
+	Lease, OfflineAfter, RequestTimeout                        time.Duration
+	MaxAttempts, DefaultBatchSize                              int
+	RetryDelays                                                []time.Duration
+	Swagger                                                    bool
 }
 
 func Load() (Config, error) {
@@ -22,6 +22,7 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	c := Config{DatabaseURL: os.Getenv("DATABASE_URL"), JWTSecret: os.Getenv("JWT_SECRET"), AdminEmail: strings.ToLower(strings.TrimSpace(os.Getenv("ADMIN_EMAIL"))), AdminPassword: os.Getenv("ADMIN_PASSWORD"), AdminName: strings.TrimSpace(os.Getenv("ADMIN_NAME")), Port: env("PORT", "8080"), AllowedOrigin: env("ALLOWED_ORIGIN", "http://127.0.0.1:5173"), Swagger: env("SWAGGER_ENABLED", "true") == "true"}
+	c.ListenAddress = env("LISTEN_ADDR", ":"+c.Port)
 	if c.DatabaseURL == "" {
 		return c, fmt.Errorf("DATABASE_URL obrigatório")
 	}

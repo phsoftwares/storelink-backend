@@ -23,6 +23,19 @@ func TestLoadDoesNotRequireSharedAgentAPIKey(t *testing.T) {
 	}
 }
 
+func TestListenAddressCanBeRestrictedToLoopback(t *testing.T) {
+	setRequiredEnvironment(t)
+	t.Setenv("PORT", "5556")
+	t.Setenv("LISTEN_ADDR", "127.0.0.1:5556")
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.ListenAddress != "127.0.0.1:5556" {
+		t.Fatalf("ListenAddress = %q, want loopback address", c.ListenAddress)
+	}
+}
+
 func TestAdminSeedConfigurationMustBeComplete(t *testing.T) {
 	setRequiredEnvironment(t)
 	t.Setenv("ADMIN_EMAIL", "admin@example.test")

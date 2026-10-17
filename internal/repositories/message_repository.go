@@ -18,6 +18,54 @@ import (
 // small INSERT statements while remaining below PostgreSQL's parameter limit.
 const messageRepositoryBatchSize = 1000
 
+func genericMessageCoalesceIdentitySQL(alias string) string {
+	return `COALESCE(NULLIF(BTRIM(` + alias + `.payload->>'codigo'), ''), NULLIF(BTRIM(` + alias + `.payload->>'id'), ''), ` + alias + `.id::text)`
+}
+
+func productMessageCoalesceIdentitySQL(alias string) string {
+	return `COALESCE(
+		NULLIF(BTRIM(` + alias + `.payload->'produto'->>'id_produto'), ''),
+		NULLIF(BTRIM(` + alias + `.payload->'produto'->>'codigo_local'), ''),
+		NULLIF(BTRIM(` + alias + `.payload->'product'->>'id_produto'), ''),
+		NULLIF(BTRIM(` + alias + `.payload->'product'->>'productId'), ''),
+		NULLIF(BTRIM(` + alias + `.payload->'product'->>'codigo_local'), ''),
+		NULLIF(BTRIM(` + alias + `.payload->'product'->>'localCode'), ''),
+		` + genericMessageCoalesceIdentitySQL(alias) + `)`
+}
+
+func messageCoalesceIdentitySQL(alias string) string {
+	generic := genericMessageCoalesceIdentitySQL(alias)
+	product := productMessageCoalesceIdentitySQL(alias)
+	return `CASE WHEN ` + alias + `.operation IN ('product.created','product.updated','product.disabled') THEN ` + product + ` ELSE ` + generic + ` END`
+}
+
+func messageCoalesceKey(message models.Message) string {
+	var payload map[string]json.RawMessage
+	if json.Unmarshal(message.Payload, &payload) == nil && payload != nil {
+		if strings.HasPrefix(message.Operation, "product.") {
+			for _, productKey := range []string{"produto", "product"} {
+				var product map[string]json.RawMessage
+				if json.Unmarshal(payload[productKey], &product) != nil {
+					continue
+				}
+				for _, key := range []string{"id_produto", "productId", "codigo_local", "localCode"} {
+					var value string
+					if json.Unmarshal(product[key], &value) == nil && strings.TrimSpace(value) != "" {
+						return strings.TrimSpace(value)
+					}
+				}
+			}
+		}
+		for _, key := range []string{"codigo", "id"} {
+			var value string
+			if json.Unmarshal(payload[key], &value) == nil && strings.TrimSpace(value) != "" {
+				return strings.TrimSpace(value)
+			}
+		}
+	}
+	return message.ID.String()
+}
+
 type IMessageQueueRepository interface {
 	Advisory(uuid.UUID) error
 	AdvisoryKeys([]string) error
@@ -29,6 +77,43 @@ type IMessageQueueRepository interface {
 type IMessageReadRepository interface {
 	ListMessages(context.Context, uuid.UUID, Filter) (models.Page, error)
 	ListIntegrationErrors(context.Context, uuid.UUID, Filter) (models.Page, error)
+}
+
+// ClaimMessagesBulk reserves a locked page with one UPDATE instead of one
+// ORM round trip per message. The caller must select the page with
+// FOR UPDATE/SKIP LOCKED inside the same transaction before calling this.
+func (r *TenantRepository) ClaimMessagesBulk(store uuid.UUID, now, leaseUntil time.Time, messages []models.Message) error {
+	if len(messages) == 0 {
+		return nil
+	}
+	values := make([]string, 0, len(messages))
+	args := make([]interface{}, 0, len(messages)*2+5)
+	for _, message := range messages {
+		if message.ID == uuid.Nil || message.ClaimToken == nil || *message.ClaimToken == uuid.Nil {
+			return models.Error(400, "Claim em lote sem id ou token")
+		}
+		values = append(values, "(?::uuid, ?::uuid)")
+		args = append(args, message.ID, *message.ClaimToken)
+	}
+	args = append(args, leaseUntil, now, now, r.company, store)
+	query := `WITH claims(id, claim_token) AS (VALUES ` + strings.Join(values, ",") + `)
+		UPDATE mensagem AS m
+		SET status = 'PROCESSING', attempts = m.attempts + 1,
+		    claim_token = c.claim_token, lease_until = ?, last_attempt_at = ?,
+		    next_attempt_at = NULL, data_hora_atualizacao = ?
+		FROM claims AS c
+		WHERE m.id_empresa = ?
+		  AND m.id_loja_destino = ?
+		  AND m.id = c.id
+		  AND m.status IN ('PENDING','RETRY')`
+	result := r.db.Exec(query, args...)
+	if result.Error != nil {
+		return result.Error
+	}
+	if int(result.RowsAffected) != len(messages) {
+		return models.Error(409, "Uma ou mais mensagens deixaram de estar pendentes durante o claim")
+	}
+	return nil
 }
 
 // AcknowledgeMessagesBulk confirms direct integration messages after the
@@ -190,17 +275,36 @@ func (r *TenantRepository) due(store uuid.UUID, now time.Time, limit int, operat
 	query := r.db.Table("mensagem AS m").Select("m.*").Where("m.id_empresa = ? AND m.id_loja_destino = ? AND m.status IN ('PENDING','RETRY') AND (m.next_attempt_at IS NULL OR m.next_attempt_at <= ?)", r.company, store, now).Where(integrationEnabled)
 	if strings.TrimSpace(operation) != "" {
 		if strings.HasSuffix(operation, ".*") {
-			query = query.Where("m.operation LIKE ?", strings.TrimSuffix(operation, "*")+"%")
+			if coalesce && strings.EqualFold(strings.TrimSpace(operation), "product.*") {
+				query = query.Where("m.operation IN ('product.created','product.updated','product.disabled')")
+			} else {
+				query = query.Where("m.operation LIKE ?", strings.TrimSuffix(operation, "*")+"%")
+			}
 		} else {
 			query = query.Where("m.operation = ?", operation)
 		}
 	}
 	if coalesce {
-		// O payload de cadastro contem o codigo local e representa o estado
-		// completo do registro. Durante uma carga inicial, somente o ultimo
-		// estado pendente de cada codigo precisa ser entregue.
-		const identity = `COALESCE(NULLIF(m.payload->>'codigo', ''), NULLIF(m.payload->>'id', ''), m.id::text)`
-		if strings.HasSuffix(operation, ".*") {
+		if strings.EqualFold(strings.TrimSpace(operation), "product.*") {
+			// Keep this expression identical to idx_mensagem_product_coalesce.
+			// The payload's top-level id identifies a publication, not a product.
+			identity := productMessageCoalesceIdentitySQL("m")
+			newerIdentity := productMessageCoalesceIdentitySQL("newer")
+			query = query.Where(`NOT EXISTS (
+				SELECT 1
+				FROM mensagem AS newer
+				WHERE newer.id_empresa = m.id_empresa
+				  AND newer.id_loja_origem = m.id_loja_origem
+				  AND newer.id_loja_destino = m.id_loja_destino
+				  AND newer.status IN ('PENDING','RETRY')
+				  AND (newer.next_attempt_at IS NULL OR newer.next_attempt_at <= ?)
+				  AND newer.operation IN ('product.created','product.updated','product.disabled')
+				  AND `+identity+` = `+newerIdentity+`
+				  AND (newer.data_hora_criacao, newer.id) > (m.data_hora_criacao, m.id)
+			)`, now)
+		} else if strings.HasSuffix(operation, ".*") {
+			identity := messageCoalesceIdentitySQL("m")
+			newerIdentity := messageCoalesceIdentitySQL("newer")
 			// A carga de cadastro sempre informa o dominio (customer.*,
 			// employee.* etc.). Evite o CASE por linha: alem de mais caro,
 			// ele impedia o PostgreSQL de aproveitar o indice de operacao.
@@ -214,10 +318,12 @@ func (r *TenantRepository) due(store uuid.UUID, now time.Time, limit int, operat
 				  AND newer.status IN ('PENDING','RETRY')
 				  AND (newer.next_attempt_at IS NULL OR newer.next_attempt_at <= ?)
 				  AND newer.operation LIKE ?
-				  AND `+identity+` = COALESCE(NULLIF(newer.payload->>'codigo', ''), NULLIF(newer.payload->>'id', ''), newer.id::text)
+				  AND `+identity+` = `+newerIdentity+`
 				  AND (newer.data_hora_criacao, newer.id) > (m.data_hora_criacao, m.id)
 			)`, now, operationPrefix+"%")
 		} else {
+			identity := messageCoalesceIdentitySQL("m")
+			newerIdentity := messageCoalesceIdentitySQL("newer")
 			const domain = `CASE
 				WHEN m.operation LIKE 'customer.%' THEN 'customer'
 				WHEN m.operation LIKE 'employee.%' THEN 'employee'
@@ -246,7 +352,7 @@ func (r *TenantRepository) due(store uuid.UUID, now time.Time, limit int, operat
 					WHEN newer.operation LIKE 'agreement.%' THEN 'agreement'
 					ELSE newer.operation
 				  END
-				  AND `+identity+` = COALESCE(NULLIF(newer.payload->>'codigo', ''), NULLIF(newer.payload->>'id', ''), newer.id::text)
+				  AND `+identity+` = `+newerIdentity+`
 				  AND (newer.data_hora_criacao, newer.id) > (m.data_hora_criacao, m.id)
 			)`, now)
 		}
@@ -260,7 +366,7 @@ func (r *TenantRepository) due(store uuid.UUID, now time.Time, limit int, operat
 // da mesma transacao do claim; assim uma queda antes do retorno desfaz a
 // consolidacao, e uma nova alteracao criada depois do claim permanece pendente.
 func (r *TenantRepository) AcknowledgeSuperseded(store uuid.UUID, now time.Time, messages []models.Message) error {
-	const identity = `COALESCE(NULLIF(payload->>'codigo', ''), NULLIF(payload->>'id', ''), id::text)`
+	identity := messageCoalesceIdentitySQL("m")
 	for _, message := range messages {
 		parts := strings.SplitN(message.Operation, ".", 2)
 		if len(parts) != 2 {
@@ -273,48 +379,96 @@ func (r *TenantRepository) AcknowledgeSuperseded(store uuid.UUID, now time.Time,
 		if message.Operation == "agreement.updated" || strings.HasPrefix(message.Operation, "agreement.") {
 			domain = "agreement"
 		}
-		key := ""
-		var payload map[string]interface{}
-		if json.Unmarshal(message.Payload, &payload) == nil && payload != nil {
-			if value, ok := payload["codigo"].(string); ok {
-				key = strings.TrimSpace(value)
-			}
-			if key == "" {
-				if value, ok := payload["id"].(string); ok {
-					key = strings.TrimSpace(value)
-				}
-			}
-		}
-		if key == "" {
-			key = message.ID.String()
-		}
+		key := messageCoalesceKey(message)
 		if err := r.db.Exec(`
-			UPDATE mensagem
+			UPDATE mensagem AS m
 			SET status = 'ACKNOWLEDGED', acknowledged_at = ?,
 			    claim_token = NULL, lease_until = NULL, next_attempt_at = NULL,
 			    last_error = ''
-			WHERE id_empresa = ?
-			  AND id_loja_origem = ?
-			  AND id_loja_destino = ?
-			  AND status IN ('PENDING','RETRY')
-			  AND operation LIKE ?
+			WHERE m.id_empresa = ?
+			  AND m.id_loja_origem = ?
+			  AND m.id_loja_destino = ?
+			  AND m.status IN ('PENDING','RETRY')
+			  AND m.operation LIKE ?
 			  AND `+identity+` = ?
-			  AND (data_hora_criacao, id) < (?, ?)`,
+			  AND EXISTS (
+				SELECT 1 FROM mensagem AS latest
+				WHERE latest.id_empresa = m.id_empresa
+				  AND latest.id_loja_origem = m.id_loja_origem
+				  AND latest.id_loja_destino = m.id_loja_destino
+				  AND latest.id = ?
+				  AND (m.data_hora_criacao, m.id) < (latest.data_hora_criacao, latest.id)
+			  )`,
 			now, r.company, message.OriginStoreID, store, domain+".%", key,
-			message.CreatedAt, message.ID).Error; err != nil {
+			message.ID).Error; err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// AcknowledgeSupersededBulk is the batched equivalent of the historical
-// per-message implementation above. It is used by the initial catalog claim
-// so a page does not execute one JSON/index scan per message.
-func (r *TenantRepository) AcknowledgeSupersededBulk(store uuid.UUID, now time.Time, messages []models.Message) error {
-	const identity = `COALESCE(NULLIF(m.payload->>'codigo', ''), NULLIF(m.payload->>'id', ''), m.id::text)`
+func (r *TenantRepository) acknowledgeSupersededProductsBulk(store uuid.UUID, now time.Time, messages []models.Message) error {
+	productIdentity := productMessageCoalesceIdentitySQL("m")
 	placeholders := make([]string, 0, len(messages))
-	args := make([]interface{}, 0, len(messages)*5+3)
+	args := make([]interface{}, 0, len(messages)*3+3)
+	for _, message := range messages {
+		placeholders = append(placeholders, "(?::uuid, ?::text, ?::uuid)")
+		args = append(args, message.OriginStoreID, messageCoalesceKey(message), message.ID)
+	}
+	if len(placeholders) == 0 {
+		return nil
+	}
+	args = append(args, now, r.company, store)
+	query := `WITH escolhidos(id_loja_origem, chave, id) AS (VALUES ` +
+		strings.Join(placeholders, ",") + `)
+		UPDATE mensagem AS m
+		SET status = 'ACKNOWLEDGED', acknowledged_at = ?,
+		    claim_token = NULL, lease_until = NULL, next_attempt_at = NULL,
+		    last_error = ''
+		FROM escolhidos AS e
+		WHERE m.id_empresa = ?
+		  AND m.id_loja_origem = e.id_loja_origem
+		  AND m.id_loja_destino = ?
+		  AND m.status IN ('PENDING','RETRY')
+		  AND m.operation IN ('product.created','product.updated','product.disabled')
+		  AND ` + productIdentity + ` = e.chave
+		  AND EXISTS (
+			SELECT 1 FROM mensagem AS latest
+			WHERE latest.id_empresa = m.id_empresa
+			  AND latest.id_loja_origem = e.id_loja_origem
+			  AND latest.id_loja_destino = m.id_loja_destino
+			  AND latest.id = e.id
+			  AND (m.data_hora_criacao, m.id) < (latest.data_hora_criacao, latest.id)
+		  )`
+	return r.db.Exec(query, args...).Error
+}
+
+// AcknowledgeSupersededBulk marks prior snapshots for the selected identities.
+// Product payloads use their own indexed nested identity so a large initial
+// queue does not rescan every JSON payload once per claimed item.
+func (r *TenantRepository) AcknowledgeSupersededBulk(store uuid.UUID, now time.Time, messages []models.Message) error {
+	products := make([]models.Message, 0, len(messages))
+	otherMessages := make([]models.Message, 0, len(messages))
+	for _, message := range messages {
+		switch message.Operation {
+		case "product.created", "product.updated", "product.disabled":
+			products = append(products, message)
+		default:
+			otherMessages = append(otherMessages, message)
+		}
+	}
+	if len(products) > 0 {
+		if err := r.acknowledgeSupersededProductsBulk(store, now, products); err != nil {
+			return err
+		}
+	}
+	messages = otherMessages
+	if len(messages) == 0 {
+		return nil
+	}
+	identity := messageCoalesceIdentitySQL("m")
+	placeholders := make([]string, 0, len(messages))
+	args := make([]interface{}, 0, len(messages)*4+3)
 	for _, message := range messages {
 		parts := strings.SplitN(message.Operation, ".", 2)
 		if len(parts) != 2 {
@@ -327,31 +481,16 @@ func (r *TenantRepository) AcknowledgeSupersededBulk(store uuid.UUID, now time.T
 		if strings.HasPrefix(message.Operation, "agreement.") {
 			domain = "agreement"
 		}
-		key := ""
-		var payload map[string]interface{}
-		if json.Unmarshal(message.Payload, &payload) == nil && payload != nil {
-			if value, ok := payload["codigo"].(string); ok {
-				key = strings.TrimSpace(value)
-			}
-			if key == "" {
-				if value, ok := payload["id"].(string); ok {
-					key = strings.TrimSpace(value)
-				}
-			}
-		}
-		if key == "" {
-			key = message.ID.String()
-		}
+		key := messageCoalesceKey(message)
 		placeholders = append(placeholders,
-			"(?::uuid, ?::text, ?::text, ?::timestamptz, ?::uuid)")
-		args = append(args, message.OriginStoreID, domain, key,
-			message.CreatedAt, message.ID)
+			"(?::uuid, ?::text, ?::text, ?::uuid)")
+		args = append(args, message.OriginStoreID, domain, key, message.ID)
 	}
 	if len(placeholders) == 0 {
 		return nil
 	}
 	args = append(args, now, r.company, store)
-	query := `WITH escolhidos(id_loja_origem, dominio, chave, criado_em, id) AS (VALUES ` +
+	query := `WITH escolhidos(id_loja_origem, dominio, chave, id) AS (VALUES ` +
 		strings.Join(placeholders, ",") + `)
 		UPDATE mensagem AS m
 		SET status = 'ACKNOWLEDGED', acknowledged_at = ?,
@@ -364,7 +503,14 @@ func (r *TenantRepository) AcknowledgeSupersededBulk(store uuid.UUID, now time.T
 		  AND m.status IN ('PENDING','RETRY')
 		  AND m.operation LIKE e.dominio || '.%'
 		  AND ` + identity + ` = e.chave
-		  AND (m.data_hora_criacao, m.id) < (e.criado_em, e.id)`
+		  AND EXISTS (
+			SELECT 1 FROM mensagem AS latest
+			WHERE latest.id_empresa = m.id_empresa
+			  AND latest.id_loja_origem = e.id_loja_origem
+			  AND latest.id_loja_destino = m.id_loja_destino
+			  AND latest.id = e.id
+			  AND (m.data_hora_criacao, m.id) < (latest.data_hora_criacao, latest.id)
+		  )`
 	return r.db.Exec(query, args...).Error
 }
 
@@ -377,9 +523,11 @@ func (r *TenantRepository) Expired(store uuid.UUID, now time.Time, limit int) ([
 	return out, e
 }
 
-// RenewClaims extends only claims that still belong to this destination and
-// token. An expired claim is deliberately not revived: a process that stopped
-// must go through the normal reclaim path instead of racing a new worker.
+// RenewClaims extends claims that still belong to this destination and token.
+// A lease may have expired while a slow local batch was running; the original
+// worker can revive it only while its fencing token is still current. If a
+// different worker reclaimed the message, the token has changed and this
+// update affects no row.
 func (r *TenantRepository) RenewClaims(store uuid.UUID, now time.Time, lease time.Duration, items []models.IntegrationRenewItem) (int, error) {
 	if len(items) == 0 {
 		return 0, nil
@@ -391,7 +539,7 @@ func (r *TenantRepository) RenewClaims(store uuid.UUID, now time.Time, lease tim
 		args = append(args, item.ID, item.ClaimToken)
 	}
 	leaseUntil := now.Add(lease)
-	args = append(args, leaseUntil, r.company, store, now)
+	args = append(args, leaseUntil, r.company, store)
 	query := `WITH claims(id, token) AS (VALUES ` + strings.Join(values, ",") + `)
 		UPDATE mensagem AS m
 		SET lease_until = ?
@@ -400,8 +548,7 @@ func (r *TenantRepository) RenewClaims(store uuid.UUID, now time.Time, lease tim
 		  AND m.claim_token = c.token
 		  AND m.id_empresa = ?
 		  AND m.id_loja_destino = ?
-		  AND m.status = 'PROCESSING'
-		  AND m.lease_until > ?`
+		  AND m.status = 'PROCESSING'`
 	result := r.db.Exec(query, args...)
 	return int(result.RowsAffected), result.Error
 }

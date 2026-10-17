@@ -62,7 +62,7 @@ func newHarness(t *testing.T) *harness {
 	if e = db.Create(&user).Error; e != nil {
 		t.Fatal(e)
 	}
-	cfg := config.Config{Port: "8080", AllowedOrigin: "http://127.0.0.1:5173", JWTSecret: "integration-only-secret-with-over-32-characters", Lease: time.Second, OfflineAfter: time.Minute, RequestTimeout: 5 * time.Second, MaxAttempts: 2, DefaultBatchSize: 500, RetryDelays: []time.Duration{250 * time.Millisecond}}
+	cfg := config.Config{Port: "8080", AllowedOrigin: "http://127.0.0.1:5173", JWTSecret: "integration-only-secret-with-over-32-characters", Lease: 15 * time.Minute, OfflineAfter: time.Minute, RequestTimeout: 5 * time.Second, MaxAttempts: 2, DefaultBatchSize: 500, RetryDelays: []time.Duration{250 * time.Millisecond}}
 	server := httptest.NewServer(routes.New(services.New(repositories.New(db), auth.New(cfg.JWTSecret), cfg)))
 	h := &harness{server: server, db: db, user: user.ID, client: server.Client(), t: t, agentKeys: make(map[string]string)}
 	t.Cleanup(func() {
@@ -168,6 +168,135 @@ func createAgent(h *harness, store, admin, company string) (string, string) {
 	return id, apiKey
 }
 
+func TestProductPublicationClaimsCoalesceNestedProductIdentity(t *testing.T) {
+	h := newHarness(t)
+	var user models.User
+	if err := h.db.First(&user, "id = ?", h.user).Error; err != nil {
+		t.Fatal(err)
+	}
+	_, login := h.request("POST", "/api/auth/login", models.LoginDTO{Email: user.Email, Senha: "password-de-teste-segura"}, "", "")
+	admin := login["token"].(string)
+	company := bodyID(h, "POST", "/api/companies", models.CompanyDTO{Nome: "Empresa coalescencia produto", CNPJ: "TEST-" + strings.ReplaceAll(uuid.NewString(), "-", "")[:10]}, admin, "")
+	group := bodyID(h, "POST", "/api/groups", models.GroupDTO{Nome: "Grupo coalescencia produto"}, admin, company)
+	origin := bodyID(h, "POST", "/api/stores", models.StoreDTO{GroupID: mustUUID(t, group), Codigo: "901", Nome: "Origem A", Tipo: "MATRIZ"}, admin, company)
+	otherOrigin := bodyID(h, "POST", "/api/stores", models.StoreDTO{GroupID: mustUUID(t, group), Codigo: "902", Nome: "Origem B", Tipo: "FILIAL"}, admin, company)
+	destination := bodyID(h, "POST", "/api/stores", models.StoreDTO{GroupID: mustUUID(t, group), Codigo: "903", Nome: "Destino", Tipo: "FILIAL"}, admin, company)
+	createAgent(h, origin, admin, company)
+	otherOriginID := mustUUID(t, otherOrigin)
+	destinationAgent, _ := createAgent(h, destination, admin, company)
+
+	productID := uuid.NewString()
+	baseTime := time.Now().UTC().Add(-time.Hour)
+	newMessage := func(originID uuid.UUID, createdAt time.Time, localCode, globalProductID, name string) models.Message {
+		product := map[string]interface{}{"codigo_local": localCode, "nome": name}
+		if globalProductID != "" {
+			product["id_produto"] = globalProductID
+		}
+		message := models.Message{
+			Tenant: models.NewTenant(mustUUID(t, company)),
+			Type:   "EVENT", Operation: "product.updated",
+			OriginStoreID: originID, DestinationStoreID: mustUUID(t, destination),
+			Payload: models.ToJSON(map[string]interface{}{
+				"id": uuid.NewString(), "evento": "UPDATED", "produto": product,
+			}),
+			Status: "PENDING",
+		}
+		message.ID = uuid.New()
+		message.CreatedAt = createdAt
+		message.UpdatedAt = createdAt
+		return message
+	}
+
+	oldByGlobalID := newMessage(mustUUID(t, origin), baseTime, "000123", productID, "v1")
+	latestByGlobalID := newMessage(mustUUID(t, origin), baseTime.Add(2*time.Second), "000123", productID, "v2")
+	oldByLocalCode := newMessage(mustUUID(t, origin), baseTime.Add(time.Second), "000124", "", "v1")
+	latestByLocalCode := newMessage(mustUUID(t, origin), baseTime.Add(3*time.Second), "000124", "", "v2")
+	otherOriginSameProduct := newMessage(otherOriginID, baseTime.Add(4*time.Second), "000123", productID, "outra origem")
+	messages := []models.Message{oldByGlobalID, latestByGlobalID, oldByLocalCode, latestByLocalCode, otherOriginSameProduct}
+	if err := h.db.Create(&messages).Error; err != nil {
+		t.Fatalf("insert product publication fixtures: %v", err)
+	}
+
+	claimed := claimCoalesced(h, destinationAgent, 10)
+	if len(claimed) != 3 {
+		t.Fatalf("claim returned %d product publications, want latest per product and origin (3): %#v", len(claimed), claimed)
+	}
+	claimedIDs := make(map[uuid.UUID]bool, len(claimed))
+	for _, message := range claimed {
+		claimedIDs[message.ID] = true
+	}
+	for _, expected := range []uuid.UUID{latestByGlobalID.ID, latestByLocalCode.ID, otherOriginSameProduct.ID} {
+		if !claimedIDs[expected] {
+			t.Fatalf("claim omitted latest message %s", expected)
+		}
+	}
+	for _, stale := range []uuid.UUID{oldByGlobalID.ID, oldByLocalCode.ID} {
+		var message models.Message
+		if err := h.db.First(&message, "id = ?", stale).Error; err != nil {
+			t.Fatalf("load superseded message %s: %v", stale, err)
+		}
+		if message.Status != "ACKNOWLEDGED" {
+			t.Fatalf("older publication %s status = %q, want ACKNOWLEDGED", stale, message.Status)
+		}
+	}
+	for _, message := range claimed {
+		ack(h, destinationAgent, message, 0, nil)
+	}
+}
+
+func TestIntegrationPendingAcceptsFiveThousandMessages(t *testing.T) {
+	h := newHarness(t)
+	var user models.User
+	if err := h.db.First(&user, "id = ?", h.user).Error; err != nil {
+		t.Fatal(err)
+	}
+	_, login := h.request("POST", "/api/auth/login", models.LoginDTO{Email: user.Email, Senha: "password-de-teste-segura"}, "", "")
+	admin := login["token"].(string)
+	company := bodyID(h, "POST", "/api/companies", models.CompanyDTO{Nome: "Empresa lote 5000", CNPJ: "TEST-" + strings.ReplaceAll(uuid.NewString(), "-", "")[:10]}, admin, "")
+	group := bodyID(h, "POST", "/api/groups", models.GroupDTO{Nome: "Grupo lote 5000"}, admin, company)
+	origin := bodyID(h, "POST", "/api/stores", models.StoreDTO{GroupID: mustUUID(t, group), Codigo: "950", Nome: "Origem lote", Tipo: "MATRIZ"}, admin, company)
+	destination := bodyID(h, "POST", "/api/stores", models.StoreDTO{GroupID: mustUUID(t, group), Codigo: "951", Nome: "Destino lote", Tipo: "FILIAL"}, admin, company)
+	destinationAgent, _ := createAgent(h, destination, admin, company)
+
+	messages := make([]models.Message, 5001)
+	for index := range messages {
+		productID := uuid.NewString()
+		messages[index] = models.Message{
+			Tenant: models.NewTenant(mustUUID(t, company)),
+			Type:   "EVENT", Operation: "product.updated",
+			OriginStoreID: mustUUID(t, origin), DestinationStoreID: mustUUID(t, destination),
+			Payload: models.ToJSON(map[string]interface{}{
+				"id": uuid.NewString(), "evento": "UPDATED",
+				"produto": map[string]interface{}{
+					"id_produto": productID, "codigo_local": fmt.Sprintf("%06d", index+1),
+				},
+			}),
+			Status: "PENDING",
+		}
+		messages[index].ID = uuid.New()
+	}
+	if err := h.db.CreateInBatches(&messages, 1000).Error; err != nil {
+		t.Fatalf("insert 5001 test messages: %v", err)
+	}
+
+	h.statusRequest("GET", "/api/integracao/v1/mensagens/pendentes?limite=5001&operacao=product.%2A&consolidar=1", nil, destinationAgent, "", 400)
+	claimed := claimWithQuery(h, destinationAgent, "/api/integracao/v1/mensagens/pendentes?limite=5000&operacao=product.%2A&consolidar=1")
+	if len(claimed) != 5000 {
+		t.Fatalf("claim returned %d messages, want 5000", len(claimed))
+	}
+	renewItems := make([]models.IntegrationRenewItem, len(claimed))
+	for index, message := range claimed {
+		if message.ClaimToken == nil {
+			t.Fatalf("claimed message %s has no lease token", message.ID)
+		}
+		renewItems[index] = models.IntegrationRenewItem{
+			ID: message.ID, ClaimToken: *message.ClaimToken,
+		}
+	}
+	h.statusRequest("POST", "/api/integracao/v1/mensagens/renovar",
+		models.IntegrationRenewDTO{Items: renewItems}, destinationAgent, "", 200)
+}
+
 func (h *harness) requestAgentWithKey(method, path string, body interface{}, agentID, apiKey string) (int, map[string]interface{}) {
 	h.t.Helper()
 	direct := strings.HasPrefix(path, "/api/integracao/v1/")
@@ -259,7 +388,15 @@ func (h *harness) statusRequest(method, path string, body interface{}, token, co
 }
 func claim(h *harness, token string, limit int) []models.Message {
 	h.t.Helper()
-	s, v := h.request("GET", fmt.Sprintf("/api/integracao/v1/mensagens/pendentes?limite=%d", limit), nil, token, "")
+	return claimWithQuery(h, token, fmt.Sprintf("/api/integracao/v1/mensagens/pendentes?limite=%d", limit))
+}
+func claimCoalesced(h *harness, token string, limit int) []models.Message {
+	h.t.Helper()
+	return claimWithQuery(h, token, fmt.Sprintf("/api/integracao/v1/mensagens/pendentes?limite=%d&consolidar=1", limit))
+}
+func claimWithQuery(h *harness, token, path string) []models.Message {
+	h.t.Helper()
+	s, v := h.request("GET", path, nil, token, "")
 	if s != 200 {
 		h.t.Fatalf("claim HTTP %d %#v", s, v)
 	}
@@ -399,12 +536,48 @@ func TestStoreLinkCloudFlows(t *testing.T) {
 	if len(initial) != 1 || initial[0].ID.String() != messageID {
 		t.Fatalf("mensagem foi entregue Ã  loja errada ou duplicada: %#v", initial)
 	}
+	if err := h.db.Model(&models.Message{}).Where("id = ?", messageID).
+		Update("lease_until", time.Now().UTC().Add(-time.Second)).Error; err != nil {
+		t.Fatalf("expire initial message lease: %v", err)
+	}
 	if renewed := renew(h, destinationAgent, initial); renewed.Renewed != 1 || renewed.LeaseUntil.IsZero() {
-		t.Fatalf("reserva nao foi renovada: %#v", renewed)
+		t.Fatalf("same-token renewal after expiry failed: %#v", renewed)
 	}
 	h.statusRequest("POST", "/api/agent/messages/"+messageID+"/ack", models.AckDTO{ClaimToken: uuid.New()}, originAgent, "", 404)
 	ack(h, destinationAgent, initial[0], 0, nil)
 	ack(h, destinationAgent, initial[0], 0, nil)
+
+	staleMessageID := uuid.NewString()
+	staleMessage := map[string]interface{}{
+		"id": staleMessageID, "type": "EVENT", "operation": "product.updated",
+		"destination_store_id": destination,
+		"payload":              map[string]interface{}{"id": "p-stale-claim", "name": "Produto com lease expirada"},
+	}
+	if status, _ := h.request("POST", "/api/agent/messages", staleMessage, originAgent, ""); status != http.StatusCreated {
+		t.Fatalf("create message for fencing test: HTTP %d", status)
+	}
+	staleClaim := claim(h, destinationAgent, 1)
+	if len(staleClaim) != 1 || staleClaim[0].ID.String() != staleMessageID || staleClaim[0].ClaimToken == nil {
+		t.Fatalf("invalid initial claim for fencing test: %#v", staleClaim)
+	}
+	if err := h.db.Model(&models.Message{}).Where("id = ?", staleMessageID).
+		Update("lease_until", time.Now().UTC().Add(-time.Second)).Error; err != nil {
+		t.Fatalf("expire stale message lease: %v", err)
+	}
+	if err := h.db.Model(&models.Message{}).Where("id = ?", staleMessageID).
+		Updates(map[string]interface{}{"status": "RETRY", "claim_token": nil,
+			"lease_until": nil, "next_attempt_at": nil}).Error; err != nil {
+		t.Fatalf("release expired message for reclaim: %v", err)
+	}
+	reclaimed := claim(h, destinationAgent, 1)
+	if len(reclaimed) != 1 || reclaimed[0].ClaimToken == nil ||
+		*reclaimed[0].ClaimToken == *staleClaim[0].ClaimToken {
+		t.Fatalf("reclaim must issue a new fencing token: %#v", reclaimed)
+	}
+	if renewed := renew(h, destinationAgent, staleClaim); renewed.Renewed != 0 {
+		t.Fatalf("old token renewed a message after reclaim: %#v", renewed)
+	}
+	ack(h, destinationAgent, reclaimed[0], 0, nil)
 
 	jobID := bodyID(h, "POST", "/api/sync/jobs", models.JobDTO{OriginStoreID: mustUUID(t, origin), DestinationStoreID: mustUUID(t, destination), Entity: "product", BatchSize: 2}, admin, company)
 	jobListStatus, jobList := h.request("GET", "/api/sync/jobs?page=1&page_size=10", nil, admin, company)
