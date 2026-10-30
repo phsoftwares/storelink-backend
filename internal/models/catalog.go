@@ -7,7 +7,7 @@ import (
 )
 
 // ProductSnapshot is the versioned business contract accepted from an Agent.
-// LocalCode belongs to one store; ProductID is the canonical StoreLink id.
+// LocalCode belongs to one store; ProductID is canonical within its store group.
 type ProductSnapshot struct {
 	ProductID                     string                `json:"id_produto,omitempty"`
 	LocalCode                     string                `json:"codigo_local" binding:"required,max=100"`
@@ -116,6 +116,7 @@ type ProductBarcodeValue struct {
 
 type Product struct {
 	Tenant
+	GroupScope
 	SKU                           string     `json:"sku"`
 	EstoqueMinimo                 float64    `json:"estoqueMinimo" gorm:"column:estoque_minimo"`
 	MargemMinima                  float64    `json:"margemMinima" gorm:"column:margem_minima"`
@@ -203,6 +204,7 @@ func (Product) TableName() string { return "produto" }
 
 type ProductBarcode struct {
 	Tenant
+	GroupScope
 	ProductID       uuid.UUID `json:"productId" gorm:"column:id_produto"`
 	Value           string    `json:"value" gorm:"column:codigo_barras"`
 	NormalizedValue string    `json:"-" gorm:"column:codigo_barras_normalizado"`
@@ -216,6 +218,7 @@ func (ProductBarcode) TableName() string { return "produto_codigo_barras" }
 
 type ProductStoreMapping struct {
 	Tenant
+	GroupScope
 	StoreID           uuid.UUID `json:"storeId" gorm:"column:id_loja"`
 	ProductID         uuid.UUID `json:"productId" gorm:"column:id_produto"`
 	LocalCode         string    `json:"localCode" gorm:"column:codigo_local"`
@@ -229,6 +232,7 @@ func (ProductStoreMapping) TableName() string { return "produto_loja_mapeamento"
 
 type ProductPrice struct {
 	Tenant
+	GroupScope
 	StoreID   uuid.UUID  `json:"storeId" gorm:"column:id_loja"`
 	ProductID uuid.UUID  `json:"productId" gorm:"column:id_produto"`
 	Kind      string     `json:"kind" gorm:"column:tipo"`
@@ -304,6 +308,7 @@ type ProductPublicationBatchResult struct {
 
 type ProductCatalogItem struct {
 	Product             ProductSnapshot        `json:"produto"`
+	NaoIntegrarPrecos   bool                   `json:"nao_integrar_precos,omitempty"`
 	Prices              []ProductPriceSnapshot `json:"precos,omitempty"`
 	PricesAuthoritative bool                   `json:"precos_autoritativos,omitempty"`
 }
@@ -346,6 +351,7 @@ type Address struct {
 
 type Customer struct {
 	Tenant
+	GroupScope
 	Name         string  `json:"name" gorm:"column:nome"`
 	Document     string  `json:"document" gorm:"column:documento"`
 	Phone        string  `json:"phone" gorm:"column:telefone"`
@@ -359,6 +365,7 @@ func (Customer) TableName() string { return "cliente" }
 
 type CustomerStoreMapping struct {
 	Tenant
+	GroupScope
 	StoreID    uuid.UUID `json:"storeId" gorm:"column:id_loja"`
 	CustomerID uuid.UUID `json:"customerId" gorm:"column:id_cliente"`
 	LocalCode  string    `json:"localCode" gorm:"column:codigo_local"`
@@ -380,6 +387,7 @@ type EmployeeSnapshot struct {
 
 type Employee struct {
 	Tenant
+	GroupScope
 	Name     string `json:"name" gorm:"column:nome"`
 	Document string `json:"document" gorm:"column:documento"`
 	Email    string `json:"email"`
@@ -392,6 +400,7 @@ func (Employee) TableName() string { return "funcionario" }
 
 type EmployeeStoreMapping struct {
 	Tenant
+	GroupScope
 	StoreID    uuid.UUID `json:"storeId" gorm:"column:id_loja"`
 	EmployeeID uuid.UUID `json:"employeeId" gorm:"column:id_funcionario"`
 	LocalCode  string    `json:"localCode" gorm:"column:codigo_local"`
@@ -413,6 +422,7 @@ type CashierOperatorValue struct {
 
 type CashierOperator struct {
 	Tenant
+	GroupScope
 	StoreID            uuid.UUID `json:"storeId" gorm:"column:id_loja"`
 	EmployeeID         uuid.UUID `json:"employeeId" gorm:"column:id_funcionario"`
 	LocalCode          string    `json:"localCode" gorm:"column:codigo_local"`

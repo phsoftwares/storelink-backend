@@ -202,7 +202,7 @@ func (s *Service) PublishDomain(ctx context.Context, identity models.Identity, r
 		return models.DomainPublicationResult{}, models.Error(403, "Integracoes de loja exigem uma credencial de loja")
 	}
 	var result models.DomainPublicationResult
-	err := s.Repo.Atomic(ctx, identity.CompanyID, func(r *repositories.TenantRepository) error {
+	err := s.Repo.AtomicGroup(ctx, identity.CompanyID, identity.GroupID, func(r *repositories.TenantRepository) error {
 		var err error
 		result, err = s.publishDomainInTransaction(r, identity, request)
 		return err
@@ -227,7 +227,7 @@ func (s *Service) PublishDomains(ctx context.Context, identity models.Identity, 
 	if !identity.IsAgent() || identity.StoreID == uuid.Nil {
 		return models.DomainPublicationBatchResult{}, models.Error(403, "Integracoes de loja exigem uma credencial de loja")
 	}
-	err := s.Repo.Atomic(ctx, identity.CompanyID, func(r *repositories.TenantRepository) error {
+	err := s.Repo.AtomicGroup(ctx, identity.CompanyID, identity.GroupID, func(r *repositories.TenantRepository) error {
 		for _, request := range requests {
 			item, err := s.publishDomainInTransaction(r, identity, request)
 			if err != nil {

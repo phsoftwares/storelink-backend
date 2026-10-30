@@ -443,6 +443,19 @@ func (r *TenantRepository) acknowledgeSupersededProductsBulk(store uuid.UUID, no
 	return r.db.Exec(query, args...).Error
 }
 
+func coalesceOperationPrefix(operation string) string {
+	separator := strings.IndexByte(operation, '.')
+	if separator <= 0 {
+		return ""
+	}
+	return operation[:separator]
+}
+
+func operationLikePrefix(prefix string) string {
+	escaped := strings.NewReplacer(`\`, `\\`, `_`, `\_`, `%`, `\%`).Replace(prefix)
+	return escaped + ".%"
+}
+
 // AcknowledgeSupersededBulk marks prior snapshots for the selected identities.
 // Product payloads use their own indexed nested identity so a large initial
 // queue does not rescan every JSON payload once per claimed item.
@@ -462,56 +475,61 @@ func (r *TenantRepository) AcknowledgeSupersededBulk(store uuid.UUID, now time.T
 			return err
 		}
 	}
-	messages = otherMessages
-	if len(messages) == 0 {
+	if len(otherMessages) == 0 {
 		return nil
 	}
-	identity := messageCoalesceIdentitySQL("m")
-	placeholders := make([]string, 0, len(messages))
-	args := make([]interface{}, 0, len(messages)*4+3)
-	for _, message := range messages {
-		parts := strings.SplitN(message.Operation, ".", 2)
-		if len(parts) != 2 {
+
+	// Keep each operation prefix constant for the SQL statement. Besides avoiding
+	// a CASE over every pending message, this lets PostgreSQL use the partial
+	// operation/identity index during an initial full-catalog delivery.
+	byDomain := make(map[string][]models.Message)
+	domains := make([]string, 0)
+	for _, message := range otherMessages {
+		domain := coalesceOperationPrefix(message.Operation)
+		if domain == "" {
 			continue
 		}
-		domain := parts[0]
-		if strings.HasPrefix(message.Operation, "cashier_operator.") {
-			domain = "cashier_operator"
+		if _, exists := byDomain[domain]; !exists {
+			domains = append(domains, domain)
 		}
-		if strings.HasPrefix(message.Operation, "agreement.") {
-			domain = "agreement"
+		byDomain[domain] = append(byDomain[domain], message)
+	}
+	identity := genericMessageCoalesceIdentitySQL("m")
+	for _, domain := range domains {
+		items := byDomain[domain]
+		placeholders := make([]string, 0, len(items))
+		args := make([]interface{}, 0, len(items)*3+4)
+		for _, message := range items {
+			placeholders = append(placeholders, "(?::uuid, ?::text, ?::uuid)")
+			args = append(args, message.OriginStoreID, messageCoalesceKey(message), message.ID)
 		}
-		key := messageCoalesceKey(message)
-		placeholders = append(placeholders,
-			"(?::uuid, ?::text, ?::text, ?::uuid)")
-		args = append(args, message.OriginStoreID, domain, key, message.ID)
+		args = append(args, now, r.company, store, operationLikePrefix(domain))
+		query := `WITH escolhidos(id_loja_origem, chave, id) AS (VALUES ` +
+			strings.Join(placeholders, ",") + `)
+			UPDATE mensagem AS m
+			SET status = 'ACKNOWLEDGED', acknowledged_at = ?,
+			    claim_token = NULL, lease_until = NULL, next_attempt_at = NULL,
+			    last_error = ''
+			FROM escolhidos AS e
+			WHERE m.id_empresa = ?
+			  AND m.id_loja_origem = e.id_loja_origem
+			  AND m.id_loja_destino = ?
+			  AND m.status IN ('PENDING','RETRY')
+			  AND m.operation LIKE ? ESCAPE E'\\'
+			  AND ` + identity + ` = e.chave
+			  AND EXISTS (
+				SELECT 1 FROM mensagem AS latest
+				WHERE latest.id_empresa = m.id_empresa
+				  AND latest.id_loja_origem = e.id_loja_origem
+				  AND latest.id_loja_destino = m.id_loja_destino
+				  AND latest.id = e.id
+				  AND (m.data_hora_criacao, m.id) < (latest.data_hora_criacao, latest.id)
+			  )`
+		if err := r.db.Exec(query, args...).Error; err != nil {
+			return err
+		}
 	}
-	if len(placeholders) == 0 {
-		return nil
-	}
-	args = append(args, now, r.company, store)
-	query := `WITH escolhidos(id_loja_origem, dominio, chave, id) AS (VALUES ` +
-		strings.Join(placeholders, ",") + `)
-		UPDATE mensagem AS m
-		SET status = 'ACKNOWLEDGED', acknowledged_at = ?,
-		    claim_token = NULL, lease_until = NULL, next_attempt_at = NULL,
-		    last_error = ''
-		FROM escolhidos AS e
-		WHERE m.id_empresa = ?
-		  AND m.id_loja_origem = e.id_loja_origem
-		  AND m.id_loja_destino = ?
-		  AND m.status IN ('PENDING','RETRY')
-		  AND m.operation LIKE e.dominio || '.%'
-		  AND ` + identity + ` = e.chave
-		  AND EXISTS (
-			SELECT 1 FROM mensagem AS latest
-			WHERE latest.id_empresa = m.id_empresa
-			  AND latest.id_loja_origem = e.id_loja_origem
-			  AND latest.id_loja_destino = m.id_loja_destino
-			  AND latest.id = e.id
-			  AND (m.data_hora_criacao, m.id) < (latest.data_hora_criacao, latest.id)
-		  )`
-	return r.db.Exec(query, args...).Error
+	return nil
 }
 
 func (r *TenantRepository) Expired(store uuid.UUID, now time.Time, limit int) ([]models.Message, error) {

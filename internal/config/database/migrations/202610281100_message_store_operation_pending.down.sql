@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS idx_mensagem_store_operation_pending;

@@ -18,7 +18,7 @@ var _ IEmployeeIntegrationService = (*Service)(nil)
 
 func (s *Service) UpsertEmployee(ctx context.Context, identity models.Identity, snapshot models.EmployeeSnapshot, pathCode string) (models.EmployeeSnapshot, error) {
 	var result models.EmployeeSnapshot
-	err := s.Repo.Atomic(ctx, identity.CompanyID, func(r *repositories.TenantRepository) error {
+	err := s.Repo.AtomicGroup(ctx, identity.CompanyID, identity.GroupID, func(r *repositories.TenantRepository) error {
 		if err := requireStoreIntegration(r, identity, "employee"); err != nil {
 			return err
 		}
@@ -47,7 +47,7 @@ func (s *Service) UpsertEmployees(ctx context.Context, identity models.Identity,
 	if err := validateBatchSize(len(snapshots)); err != nil {
 		return result, err
 	}
-	err := s.Repo.Atomic(ctx, identity.CompanyID, func(r *repositories.TenantRepository) error {
+	err := s.Repo.AtomicGroup(ctx, identity.CompanyID, identity.GroupID, func(r *repositories.TenantRepository) error {
 		if err := requireStoreIntegration(r, identity, "employee"); err != nil {
 			return err
 		}

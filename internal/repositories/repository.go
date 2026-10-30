@@ -16,6 +16,7 @@ type Repository struct{ db *gorm.DB }
 type TenantRepository struct {
 	db      *gorm.DB
 	company uuid.UUID
+	group   uuid.UUID
 }
 
 type IRepository interface {
@@ -31,6 +32,7 @@ type IRepository interface {
 	ITransferRepository
 	Scoped(context.Context, uuid.UUID) *TenantRepository
 	Atomic(context.Context, uuid.UUID, func(*TenantRepository) error) error
+	AtomicGroup(context.Context, uuid.UUID, uuid.UUID, func(*TenantRepository) error) error
 }
 
 var _ IRepository = (*Repository)(nil)
@@ -68,12 +70,73 @@ func (r *Repository) Atomic(ctx context.Context, company uuid.UUID, fn func(*Ten
 	}
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error { return fn(&TenantRepository{db: tx, company: company}) })
 }
+
+// AtomicGroup creates a tenant transaction scoped to a single store network.
+// The group is checked against the company before any callback can read/write.
+func (r *Repository) AtomicGroup(ctx context.Context, company, group uuid.UUID, fn func(*TenantRepository) error) error {
+	if company == uuid.Nil || group == uuid.Nil {
+		return models.Error(403, "Empresa e grupo obrigat\u00f3rios")
+	}
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var count int64
+		if err := tx.Model(&models.Group{}).Where("id_empresa = ? AND id = ?", company, group).Count(&count).Error; err != nil {
+			return err
+		}
+		if count != 1 {
+			return models.Error(404, "Grupo n\u00e3o encontrado nesta empresa")
+		}
+		return fn(&TenantRepository{db: tx, company: company, group: group})
+	})
+}
+
+func (r *TenantRepository) GroupID() uuid.UUID { return r.group }
+
+func (r *TenantRepository) catalog(out interface{}) *gorm.DB {
+	q := r.db.Model(out).Where("id_empresa = ?", r.company)
+	if r.group == uuid.Nil {
+		return q.Where("1 = 0")
+	}
+	return q.Where("id_grupo = ?", r.group)
+}
+
+func groupScopedTable(out interface{}) bool {
+	t := reflect.TypeOf(out)
+	if t == nil {
+		return false
+	}
+	for t.Kind() == reflect.Ptr || t.Kind() == reflect.Slice {
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		return false
+	}
+	value, ok := reflect.New(t).Interface().(interface{ TableName() string })
+	if !ok {
+		return false
+	}
+	switch value.TableName() {
+	case "produto", "produto_codigo_barras", "produto_loja_mapeamento", "produto_preco_loja",
+		"cliente", "cliente_loja_mapeamento", "funcionario", "funcionario_loja_mapeamento", "operador_caixa":
+		return true
+	default:
+		return false
+	}
+}
+
 func (r *TenantRepository) base(out interface{}) *gorm.DB {
 	q := r.db.Model(out)
 	if r.company == uuid.Nil {
 		return q.Where("1 = 0")
 	}
-	return q.Where("id_empresa = ?", r.company)
+	q = q.Where("id_empresa = ?", r.company)
+	if groupScopedTable(out) {
+		if r.group == uuid.Nil {
+			q = q.Where("1 = 0")
+		} else {
+			q = q.Where("id_grupo = ?", r.group)
+		}
+	}
+	return q
 }
 func (r *TenantRepository) Find(out interface{}, id uuid.UUID, lock bool) error {
 	q := r.base(out).Where("id = ?", id)
@@ -87,6 +150,11 @@ func (r *TenantRepository) Create(out models.ScopedEntity) error {
 		return models.Error(403, "Empresa obrigatória")
 	}
 	out.SetCompany(r.company)
+	if r.group != uuid.Nil {
+		if scoped, ok := out.(models.GroupScopedEntity); ok {
+			scoped.SetGroup(r.group)
+		}
+	}
 	return r.db.Create(out).Error
 }
 
@@ -109,6 +177,11 @@ func (r *TenantRepository) CreateMany(out interface{}, batchSize int) error {
 			return errors.New("CreateMany slice values must be tenant scoped entities")
 		}
 		entity.SetCompany(r.company)
+		if r.group != uuid.Nil {
+			if scoped, ok := row.Interface().(models.GroupScopedEntity); ok {
+				scoped.SetGroup(r.group)
+			}
+		}
 	}
 	if batchSize < 1 {
 		batchSize = 500
@@ -120,11 +193,21 @@ func (r *TenantRepository) InsertUnique(out models.ScopedEntity) (bool, error) {
 		return false, models.Error(403, "Empresa obrigatória")
 	}
 	out.SetCompany(r.company)
+	if r.group != uuid.Nil {
+		if scoped, ok := out.(models.GroupScopedEntity); ok {
+			scoped.SetGroup(r.group)
+		}
+	}
 	q := r.db.Clauses(clause.OnConflict{DoNothing: true}).Create(out)
 	return q.RowsAffected > 0, q.Error
 }
 func (r *TenantRepository) Save(out models.ScopedEntity, id uuid.UUID) error {
 	out.SetCompany(r.company)
+	if r.group != uuid.Nil {
+		if scoped, ok := out.(models.GroupScopedEntity); ok {
+			scoped.SetGroup(r.group)
+		}
+	}
 	q := r.base(out).Where("id = ?", id).Select("*").Updates(out)
 	if q.Error != nil {
 		return q.Error

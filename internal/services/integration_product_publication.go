@@ -25,6 +25,7 @@ type productPublicationPayload struct {
 	Version             int64                         `json:"versao"`
 	HashPayload         string                        `json:"hash_payload"`
 	Product             models.ProductSnapshot        `json:"produto"`
+	NaoIntegrarPrecos   bool                          `json:"nao_integrar_precos,omitempty"`
 	Prices              []models.ProductPriceSnapshot `json:"precos,omitempty"`
 	PricesAuthoritative bool                          `json:"precos_autoritativos,omitempty"`
 }
@@ -36,10 +37,37 @@ type productPublicationPayload struct {
 type publicationIdentity struct {
 	Event               string                        `json:"evento"`
 	Product             models.ProductSnapshot        `json:"produto"`
+	NaoIntegrarPrecos   bool                          `json:"nao_integrar_precos,omitempty"`
 	Prices              []models.ProductPriceSnapshot `json:"precos,omitempty"`
 	PricesAuthoritative bool                          `json:"precos_autoritativos,omitempty"`
 	LocalCodeCandidate  string                        `json:"codigo_local_candidato,omitempty"`
 	RequestNewLocalCode bool                          `json:"solicitar_novo_codigo_local,omitempty"`
+}
+
+func stripProductPriceFields(product *models.ProductSnapshot) {
+	product.PrecoVenda = 0
+	product.PrecoVendaInformado = false
+	product.PrecoVenda1 = 0
+	product.PrecoVenda2 = 0
+	product.PrecoVenda3 = 0
+	product.PrecoVenda4 = 0
+	product.PrecoVenda5 = 0
+	product.PrecoPromocao = 0
+	product.DataPromocao = nil
+	product.FimPromocao = nil
+	product.MargemDesconto = 0
+	product.MargemMinima = 0
+	product.DescontoPrecoVenda = 0
+	product.FarmaciaPMC = 0
+	product.UsaTabelaPreco = "NAO"
+	product.PMargem1 = 0
+	product.PMargem2 = 0
+	product.PMargem3 = 0
+	product.PMargem4 = 0
+	product.PMargem5 = 0
+	product.PrecoCustoAnterior = 0
+	product.PrecoVendaAnterior = 0
+	product.PrecoFarmaPop = 0
 }
 
 func (s *Service) PublishProduct(ctx context.Context, identity models.Identity, request models.ProductPublicationDTO) (models.ProductPublicationResult, error) {
@@ -47,7 +75,7 @@ func (s *Service) PublishProduct(ctx context.Context, identity models.Identity, 
 		return models.ProductPublicationResult{}, err
 	}
 	var result models.ProductPublicationResult
-	err := s.Repo.Atomic(ctx, identity.CompanyID, func(r *repositories.TenantRepository) error {
+	err := s.Repo.AtomicGroup(ctx, identity.CompanyID, identity.GroupID, func(r *repositories.TenantRepository) error {
 		var err error
 		result, err = s.publishProductInTransaction(r, identity, request)
 		return err
@@ -65,7 +93,7 @@ func (s *Service) PublishProducts(ctx context.Context, identity models.Identity,
 			return result, err
 		}
 	}
-	err := s.Repo.Atomic(ctx, identity.CompanyID, func(r *repositories.TenantRepository) error {
+	err := s.Repo.AtomicGroup(ctx, identity.CompanyID, identity.GroupID, func(r *repositories.TenantRepository) error {
 		// A local-code remap can affect an already occupied destination mapping
 		// and therefore keeps the conservative per-item path. A normal initial
 		// load, however, has no remap request and can reconcile all products in
@@ -86,6 +114,17 @@ func (s *Service) PublishProducts(ctx context.Context, identity models.Identity,
 
 		if err := requireStoreIntegration(r, identity, "product"); err != nil {
 			return err
+		}
+		group, err := groupForIdentity(r, identity)
+		if err != nil {
+			return err
+		}
+		if !group.IntegrarPrecos {
+			for index := range requests {
+				requests[index].Prices = nil
+				requests[index].PricesAuthoritative = false
+				stripProductPriceFields(&requests[index].Product)
+			}
 		}
 		needsPrices := false
 		for _, request := range requests {
@@ -124,10 +163,6 @@ func (s *Service) PublishProducts(ctx context.Context, identity models.Identity,
 			}
 		}
 
-		group, err := groupForIdentity(r, identity)
-		if err != nil {
-			return err
-		}
 		for _, request := range requests[1:] {
 			if !sameDestinationIDs(requests[0].DestinationStoreIDs, request.DestinationStoreIDs) {
 				return models.Error(400, "Todos os itens do lote devem usar os mesmos destinos")
@@ -187,6 +222,7 @@ func (s *Service) PublishProducts(ctx context.Context, identity models.Identity,
 			} else {
 				identityPayload := publicationIdentity{
 					Event: request.Event, Product: request.Product,
+					NaoIntegrarPrecos:   !group.IntegrarPrecos,
 					Prices:              request.Prices,
 					PricesAuthoritative: request.PricesAuthoritative,
 					LocalCodeCandidate:  request.LocalCodeCandidate,
@@ -195,7 +231,8 @@ func (s *Service) PublishProducts(ctx context.Context, identity models.Identity,
 				publicationID = uuid.NewSHA1(uuid.Nil, []byte(identity.StoreID.String()+"|"+productID.String()+"|"+hashJSON(identityPayload)))
 			}
 			payload := productPublicationPayload{ID: publicationID, Event: request.Event,
-				Product: request.Product, Prices: request.Prices,
+				Product: request.Product, NaoIntegrarPrecos: !group.IntegrarPrecos,
+				Prices:              request.Prices,
 				PricesAuthoritative: request.PricesAuthoritative}
 			payload.HashPayload = hashJSON(payload)
 			payload.Version = publicationVersion(payload.HashPayload)
@@ -323,6 +360,15 @@ func (s *Service) publishProductInTransaction(r *repositories.TenantRepository, 
 	if err := requireStoreIntegration(r, identity, "product"); err != nil {
 		return models.ProductPublicationResult{}, err
 	}
+	group, err := groupForIdentity(r, identity)
+	if err != nil {
+		return models.ProductPublicationResult{}, err
+	}
+	if !group.IntegrarPrecos {
+		request.Prices = nil
+		request.PricesAuthoritative = false
+		stripProductPriceFields(&request.Product)
+	}
 	if len(request.Prices) > 0 || request.PricesAuthoritative {
 		if err := requireStoreIntegration(r, identity, "prices"); err != nil {
 			return models.ProductPublicationResult{}, err
@@ -427,19 +473,21 @@ func (s *Service) publishProductInTransaction(r *repositories.TenantRepository, 
 	if request.ID != nil && *request.ID != uuid.Nil {
 		publicationID = *request.ID
 	} else {
-		publicationID = uuid.NewSHA1(uuid.Nil, []byte(identity.StoreID.String()+"|"+productID.String()+"|"+request.Event+"|"+hashJSON(request.Product)))
+		identityPayload := publicationIdentity{
+			Event: request.Event, Product: request.Product,
+			NaoIntegrarPrecos: !group.IntegrarPrecos,
+			Prices:            request.Prices, PricesAuthoritative: request.PricesAuthoritative,
+		}
+		publicationID = uuid.NewSHA1(uuid.Nil, []byte(identity.StoreID.String()+"|"+productID.String()+"|"+hashJSON(identityPayload)))
 	}
 	payload := productPublicationPayload{ID: publicationID, Event: request.Event,
-		Product: request.Product, Prices: request.Prices,
+		Product: request.Product, NaoIntegrarPrecos: !group.IntegrarPrecos,
+		Prices:              request.Prices,
 		PricesAuthoritative: request.PricesAuthoritative}
 	payload.HashPayload = hashJSON(payload)
 	payload.Version = publicationVersion(payload.HashPayload)
 	payloadJSON := models.ToJSON(payload)
 	operation := map[string]string{"CREATED": "product.created", "UPDATED": "product.updated", "DISABLED": "product.disabled"}[request.Event]
-	group, err := groupForIdentity(r, identity)
-	if err != nil {
-		return models.ProductPublicationResult{}, err
-	}
 	destinations, err := publicationDestinations(r, identity, request.DestinationStoreIDs)
 	if err != nil {
 		return models.ProductPublicationResult{}, err
@@ -700,7 +748,7 @@ func (s *Service) ProductCatalog(ctx context.Context, identity models.Identity, 
 		pageSize = maxProductCatalogPageSize
 	}
 	var result models.ProductCatalogPage
-	err := s.Repo.Atomic(ctx, identity.CompanyID, func(r *repositories.TenantRepository) error {
+	err := s.Repo.AtomicGroup(ctx, identity.CompanyID, identity.GroupID, func(r *repositories.TenantRepository) error {
 		if err := requireStoreIntegration(r, identity, "product"); err != nil {
 			return err
 		}
@@ -813,7 +861,13 @@ func (s *Service) ProductCatalog(ctx context.Context, identity models.Identity, 
 				barcodeC000055 := barcode.C000055
 				snapshot.Barcodes = append(snapshot.Barcodes, models.ProductBarcodeValue{Value: barcode.Value, Primary: &barcodePrimary, Active: &barcodeActive, Fraction: barcode.Fraction, C000055: &barcodeC000055})
 			}
-			item := models.ProductCatalogItem{Product: snapshot, Prices: []models.ProductPriceSnapshot{}, PricesAuthoritative: group.IntegrarPrecos}
+			if !group.IntegrarPrecos {
+				stripProductPriceFields(&snapshot)
+			}
+			item := models.ProductCatalogItem{
+				Product: snapshot, NaoIntegrarPrecos: !group.IntegrarPrecos,
+				Prices: []models.ProductPriceSnapshot{}, PricesAuthoritative: group.IntegrarPrecos,
+			}
 			for _, price := range pricesByID[product.ID] {
 				priceActive, amount := price.Active, price.Amount
 				item.Prices = append(item.Prices, models.ProductPriceSnapshot{LocalCode: mapping.LocalCode, Kind: price.Kind, Quantity: price.Quantity, Amount: &amount, Active: &priceActive, ValidFrom: price.ValidFrom})

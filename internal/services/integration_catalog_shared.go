@@ -102,19 +102,19 @@ func nextCanonicalProductCode(current, generated string) string {
 }
 
 func lockProductSnapshots(r *repositories.TenantRepository, identity models.Identity, _ []models.ProductSnapshot) error {
-	// SKU and active barcode identity are tenant-wide, so a single bounded
-	// tenant lock protects them without consuming one PostgreSQL lock per row.
-	return r.AdvisoryKeys([]string{"catalog:products:tenant:" + identity.CompanyID.String()})
+	// SKU and active barcode identity belong to one store group, so a single
+	// bounded group lock protects them without consuming one PostgreSQL lock per row.
+	return r.AdvisoryKeys([]string{"catalog:products:group:" + identity.GroupID.String()})
 }
 
 func lockCustomerSnapshots(r *repositories.TenantRepository, identity models.Identity, _ []models.CustomerSnapshot) error {
-	return r.AdvisoryKeys([]string{"catalog:customers:tenant:" + identity.CompanyID.String()})
+	return r.AdvisoryKeys([]string{"catalog:customers:group:" + identity.GroupID.String()})
 }
 
 func lockEmployeeSnapshots(r *repositories.TenantRepository, identity models.Identity, _ []models.EmployeeSnapshot) error {
-	return r.AdvisoryKeys([]string{"catalog:people:tenant:" + identity.CompanyID.String()})
+	return r.AdvisoryKeys([]string{"catalog:people:group:" + identity.GroupID.String()})
 }
 
 func lockCashierOperators(r *repositories.TenantRepository, identity models.Identity, _ []models.CashierOperatorSnapshot) error {
-	return r.AdvisoryKeys([]string{"catalog:people:tenant:" + identity.CompanyID.String()})
+	return r.AdvisoryKeys([]string{"catalog:people:group:" + identity.GroupID.String()})
 }

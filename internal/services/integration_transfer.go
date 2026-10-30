@@ -36,7 +36,7 @@ func (s *Service) CreateIntegrationTransfer(ctx context.Context, identity models
 	request.SentAt = request.SentAt.UTC()
 	result.Number = request.Number
 	payloadHash := hashJSON(request)
-	err := s.Repo.Atomic(ctx, identity.CompanyID, func(r *repositories.TenantRepository) error {
+	err := s.Repo.AtomicGroup(ctx, identity.CompanyID, identity.GroupID, func(r *repositories.TenantRepository) error {
 		if err := r.Advisory(request.ID); err != nil {
 			return err
 		}
@@ -155,7 +155,7 @@ func (s *Service) IntegrationTransferDetail(ctx context.Context, identity models
 
 func (s *Service) UpdateIntegrationTransfer(ctx context.Context, identity models.Identity, id uuid.UUID, request models.TransferStatusDTO) (models.Transfer, error) {
 	var transfer models.Transfer
-	err := s.Repo.Atomic(ctx, identity.CompanyID, func(r *repositories.TenantRepository) error {
+	err := s.Repo.AtomicGroup(ctx, identity.CompanyID, identity.GroupID, func(r *repositories.TenantRepository) error {
 		if err := r.Find(&transfer, id, true); err != nil {
 			return err
 		}

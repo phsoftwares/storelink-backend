@@ -244,6 +244,54 @@ func TestProductPublicationClaimsCoalesceNestedProductIdentity(t *testing.T) {
 	}
 }
 
+func TestDomainClaimsCoalesceTrimmedCustomerIdentity(t *testing.T) {
+	h := newHarness(t)
+	var user models.User
+	if err := h.db.First(&user, "id = ?", h.user).Error; err != nil {
+		t.Fatal(err)
+	}
+	_, login := h.request("POST", "/api/auth/login", models.LoginDTO{Email: user.Email, Senha: "password-de-teste-segura"}, "", "")
+	admin := login["token"].(string)
+	company := bodyID(h, "POST", "/api/companies", models.CompanyDTO{Nome: "Empresa coalescencia cadastro", CNPJ: "TEST-" + strings.ReplaceAll(uuid.NewString(), "-", "")[:10]}, admin, "")
+	group := bodyID(h, "POST", "/api/groups", models.GroupDTO{Nome: "Grupo coalescencia cadastro"}, admin, company)
+	origin := bodyID(h, "POST", "/api/stores", models.StoreDTO{GroupID: mustUUID(t, group), Codigo: "911", Nome: "Origem cadastro", Tipo: "MATRIZ"}, admin, company)
+	destination := bodyID(h, "POST", "/api/stores", models.StoreDTO{GroupID: mustUUID(t, group), Codigo: "912", Nome: "Destino cadastro", Tipo: "FILIAL"}, admin, company)
+	destinationAgent, _ := createAgent(h, destination, admin, company)
+
+	baseTime := time.Now().UTC().Add(-time.Hour)
+	newMessage := func(createdAt time.Time, name string) models.Message {
+		message := models.Message{
+			Tenant: models.NewTenant(mustUUID(t, company)),
+			Type:   "EVENT", Operation: "customer.updated",
+			OriginStoreID: mustUUID(t, origin), DestinationStoreID: mustUUID(t, destination),
+			Payload: models.ToJSON(map[string]interface{}{"codigo": " 000123 ", "nome": name}),
+			Status:  "PENDING",
+		}
+		message.ID = uuid.New()
+		message.CreatedAt = createdAt
+		message.UpdatedAt = createdAt
+		return message
+	}
+	stale := newMessage(baseTime, "Cliente anterior")
+	latest := newMessage(baseTime.Add(time.Second), "Cliente atualizado")
+	if err := h.db.Create(&[]models.Message{stale, latest}).Error; err != nil {
+		t.Fatalf("insert customer coalescing fixtures: %v", err)
+	}
+
+	claimed := claimCoalesced(h, destinationAgent, 10)
+	if len(claimed) != 1 || claimed[0].ID != latest.ID {
+		t.Fatalf("claim returned %#v; want only the newest customer snapshot %s", claimed, latest.ID)
+	}
+	var stored models.Message
+	if err := h.db.First(&stored, "id = ?", stale.ID).Error; err != nil {
+		t.Fatalf("load superseded customer message: %v", err)
+	}
+	if stored.Status != "ACKNOWLEDGED" {
+		t.Fatalf("older customer snapshot status = %q, want ACKNOWLEDGED", stored.Status)
+	}
+	ack(h, destinationAgent, claimed[0], 0, nil)
+}
+
 func TestIntegrationPendingAcceptsFiveThousandMessages(t *testing.T) {
 	h := newHarness(t)
 	var user models.User

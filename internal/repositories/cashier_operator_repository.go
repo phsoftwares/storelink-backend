@@ -17,7 +17,7 @@ var _ ICashierOperatorRepository = (*TenantRepository)(nil)
 
 func (r *TenantRepository) CashierOperatorMapping(storeID uuid.UUID, localCode string) (models.CashierOperator, bool, error) {
 	var value models.CashierOperator
-	err := r.db.Where("id_empresa = ? AND id_loja = ? AND UPPER(BTRIM(codigo_local)) = ?", r.company, storeID, strings.ToUpper(strings.TrimSpace(localCode))).First(&value).Error
+	err := r.catalog(&models.CashierOperator{}).Where("id_loja = ? AND UPPER(BTRIM(codigo_local)) = ?", storeID, strings.ToUpper(strings.TrimSpace(localCode))).First(&value).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return value, false, nil
 	}

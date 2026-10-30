@@ -69,7 +69,7 @@ func (s *Service) Batch(ctx context.Context, i models.Identity, jobID uuid.UUID,
 	b := models.SyncBatch{Tenant: models.NewTenant(i.CompanyID), JobID: jobID, BatchNumber: d.BatchNumber, ItemCount: len(d.Items), Status: "PENDING", TotalItems: d.TotalItems, IsLast: d.IsLast, PayloadHash: hashJSON(d)}
 	b.ID = d.ID
 	duplicate := false
-	e := s.Repo.Atomic(ctx, i.CompanyID, func(r *repositories.TenantRepository) error {
+	e := s.Repo.AtomicGroup(ctx, i.CompanyID, i.GroupID, func(r *repositories.TenantRepository) error {
 		if e := r.Advisory(jobID); e != nil {
 			return e
 		}

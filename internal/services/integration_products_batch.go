@@ -91,7 +91,7 @@ func upsertProductSnapshotsBatchWithOptions(r *repositories.TenantRepository, id
 	for _, snapshot := range snapshots {
 		localCode := normalizeCatalogKey(snapshot.LocalCode)
 		localCodes = append(localCodes, localCode)
-		// SKU is a tenant-wide identity and must never be synthesized from the
+		// SKU is a group-wide identity and must never be synthesized from the
 		// local C000025.CODIGO. The local code is resolved through the store
 		// mapping below.
 		for _, candidate := range []string{normalizeCatalogKey(snapshot.SKU)} {
@@ -268,7 +268,7 @@ func upsertProductSnapshotsBatchWithOptions(r *repositories.TenantRepository, id
 			continue
 		}
 		if hasActiveProductBarcode(snapshot) {
-			// The EAN is present but is not known in this tenant yet. It must
+			// The EAN is present but is not known in this store group yet. It must
 			// not fall through to a reused local code or SKU: that is exactly
 			// how two different products from two stores used to be merged.
 			selected := uuid.New()
@@ -384,7 +384,7 @@ func upsertProductSnapshotsBatchWithOptions(r *repositories.TenantRepository, id
 		return nil, err
 	}
 	if len(foreignIDs) > 0 {
-		return nil, models.Error(409, "PRODUCT_TENANT_CONFLICT: productId pertence a outra empresa")
+		return nil, models.Error(409, "PRODUCT_GROUP_CONFLICT: productId pertence a outra empresa ou grupo")
 	}
 
 	storedProducts, err := r.ProductsByIDs(resolvedIDs)
@@ -481,7 +481,7 @@ func upsertProductSnapshotsBatchWithOptions(r *repositories.TenantRepository, id
 			}
 			return "", models.Error(409, "PRODUCT_LOCAL_CODE_EXHAUSTED: nao foi possivel reservar um codigo canonico livre")
 		}
-		// The first transaction that acquires the tenant advisory lock wins a
+		// The first transaction that acquires the group advisory lock wins a
 		// contested code. Every later product is moved to the next free canonical
 		// code, and that chosen value is sent back to the source and to all stores.
 		for index, productID := range resolvedIDs {

@@ -47,7 +47,7 @@ func (s *Service) UpsertProductPrices(ctx context.Context, identity models.Ident
 		}
 	}
 
-	err := s.Repo.Atomic(ctx, identity.CompanyID, func(r *repositories.TenantRepository) error {
+	err := s.Repo.AtomicGroup(ctx, identity.CompanyID, identity.GroupID, func(r *repositories.TenantRepository) error {
 		if err := requireStoreIntegration(r, identity, "prices"); err != nil {
 			return err
 		}

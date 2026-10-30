@@ -105,7 +105,7 @@ func (s *Service) Send(ctx context.Context, i models.Identity, d models.MessageD
 		return m, false, models.Error(400, "Payload deve ser um objeto de domínio")
 	}
 	duplicate := false
-	err := s.Repo.Atomic(ctx, i.CompanyID, func(r *repositories.TenantRepository) error {
+	err := s.Repo.AtomicGroup(ctx, i.CompanyID, i.GroupID, func(r *repositories.TenantRepository) error {
 		if e := r.Advisory(d.ID); e != nil {
 			return e
 		}

@@ -421,7 +421,7 @@ func canonicalizeProductSnapshot(r *repositories.TenantRepository, storeID uuid.
 	if err := r.Find(&existing, productID, false); err == nil {
 		product.CreatedAt = existing.CreatedAt
 		if strings.TrimSpace(existing.SKU) != "" {
-			// Keep the canonical tenant SKU when the product was resolved by
+			// Keep the canonical group SKU when the product was resolved by
 			// EAN. The store-specific internal code is persisted in the
 			// product/store mapping, not in the global product row.
 			product.SKU = existing.SKU
@@ -543,7 +543,7 @@ func resolveSnapshotProductID(r *repositories.TenantRepository, storeID uuid.UUI
 				return uuid.Nil, lookupErr
 			}
 			if len(foreignIDs) > 0 {
-				return uuid.Nil, models.Error(409, "PRODUCT_TENANT_CONFLICT: productId pertence a outra empresa")
+				return uuid.Nil, models.Error(409, "PRODUCT_GROUP_CONFLICT: productId pertence a outra empresa ou grupo")
 			}
 			return id, nil
 		}
@@ -580,7 +580,7 @@ func resolveSnapshotProductID(r *repositories.TenantRepository, storeID uuid.UUI
 				return uuid.Nil, lookupErr
 			}
 			if len(foreignIDs) > 0 {
-				return uuid.Nil, models.Error(409, "PRODUCT_TENANT_CONFLICT: productId pertence a outra empresa")
+				return uuid.Nil, models.Error(409, "PRODUCT_GROUP_CONFLICT: productId pertence a outra empresa ou grupo")
 			}
 			if selected != uuid.Nil && selected != id {
 				return uuid.Nil, models.Error(409, "PRODUCT_IDENTITY_CONFLICT: productId diverge do mapeamento já registrado")

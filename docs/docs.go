@@ -5571,6 +5571,9 @@ const docTemplate = `{
         "models.ProductCatalogItem": {
             "type": "object",
             "properties": {
+                "nao_integrar_precos": {
+                    "type": "boolean"
+                },
                 "precos": {
                     "type": "array",
                     "items": {

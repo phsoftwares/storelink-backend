@@ -66,6 +66,16 @@ type Tenant struct {
 	CompanyID uuid.UUID `json:"idEmpresa" gorm:"column:id_empresa;type:uuid"`
 }
 
+// GroupScope marks catalog records whose identity and visibility belong to a
+// store network inside a company.
+type GroupScope struct {
+	GroupID uuid.UUID `json:"groupId" gorm:"column:id_grupo;type:uuid;primaryKey"`
+}
+
+func (g *GroupScope) SetGroup(id uuid.UUID) { g.GroupID = id }
+
+type GroupScopedEntity interface{ SetGroup(uuid.UUID) }
+
 func NewTenant(id uuid.UUID) Tenant       { return Tenant{Base: NewBase(), CompanyID: id} }
 func (t *Tenant) SetCompany(id uuid.UUID) { t.CompanyID = id }
 
@@ -277,6 +287,7 @@ func (SyncItem) TableName() string { return "sync_item" }
 
 type Transfer struct {
 	Tenant
+	GroupScope
 	OriginStoreID      uuid.UUID  `json:"originStoreId" gorm:"column:id_loja_origem"`
 	DestinationStoreID uuid.UUID  `json:"destinationStoreId" gorm:"column:id_loja_destino"`
 	Numero             string     `json:"numero"`
@@ -296,6 +307,7 @@ func (Transfer) TableName() string { return "transferencia" }
 
 type TransferItem struct {
 	Tenant
+	GroupScope
 	TransferID             uuid.UUID  `json:"transferId" gorm:"column:id_transferencia"`
 	ProductID              *uuid.UUID `json:"productId,omitempty" gorm:"column:id_produto"`
 	SourceProductKey       string     `json:"localProductCode" gorm:"column:codigo_produto_origem"`

@@ -17,9 +17,16 @@ var _ IProductIntegrationService = (*Service)(nil)
 
 func (s *Service) UpsertProduct(ctx context.Context, identity models.Identity, snapshot models.ProductSnapshot, pathCode string) (models.ProductSnapshot, error) {
 	var result models.ProductSnapshot
-	err := s.Repo.Atomic(ctx, identity.CompanyID, func(r *repositories.TenantRepository) error {
+	err := s.Repo.AtomicGroup(ctx, identity.CompanyID, identity.GroupID, func(r *repositories.TenantRepository) error {
 		if err := requireStoreIntegration(r, identity, "product"); err != nil {
 			return err
+		}
+		group, err := groupForIdentity(r, identity)
+		if err != nil {
+			return err
+		}
+		if !group.IntegrarPrecos {
+			stripProductPriceFields(&snapshot)
 		}
 		if err := normalizeProductBatchSnapshot(&snapshot); err != nil {
 			return err
@@ -51,9 +58,18 @@ func (s *Service) UpsertProducts(ctx context.Context, identity models.Identity, 
 	if err := validateBatchSize(len(snapshots)); err != nil {
 		return result, err
 	}
-	err := s.Repo.Atomic(ctx, identity.CompanyID, func(r *repositories.TenantRepository) error {
+	err := s.Repo.AtomicGroup(ctx, identity.CompanyID, identity.GroupID, func(r *repositories.TenantRepository) error {
 		if err := requireStoreIntegration(r, identity, "product"); err != nil {
 			return err
+		}
+		group, err := groupForIdentity(r, identity)
+		if err != nil {
+			return err
+		}
+		if !group.IntegrarPrecos {
+			for index := range snapshots {
+				stripProductPriceFields(&snapshots[index])
+			}
 		}
 		seen := make(map[string]struct{}, len(snapshots))
 		for index := range snapshots {

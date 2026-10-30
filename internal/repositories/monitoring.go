@@ -84,7 +84,7 @@ func (r *TenantRepository) Dashboard(f Filter, offlineAfter time.Duration) (mode
 func (r *TenantRepository) catalogCount(model interface{}, mappingTable, entityColumn string, f Filter) (int64, error) {
 	if f.GroupID == uuid.Nil && f.StoreID == uuid.Nil {
 		var count int64
-		err := r.base(model).Count(&count).Error
+		err := r.db.Model(model).Where("id_empresa = ?", r.company).Count(&count).Error
 		return count, err
 	}
 	var count int64

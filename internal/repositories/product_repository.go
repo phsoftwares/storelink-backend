@@ -51,7 +51,7 @@ var _ IProductRepository = (*TenantRepository)(nil)
 
 func (r *TenantRepository) ProductBarcode(normalized string) (models.ProductBarcode, bool, error) {
 	var value models.ProductBarcode
-	err := r.db.Where("id_empresa = ? AND codigo_barras_normalizado = ? AND ativo = TRUE", r.company, normalized).First(&value).Error
+	err := r.catalog(&models.ProductBarcode{}).Where("codigo_barras_normalizado = ? AND ativo = TRUE", normalized).First(&value).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return value, false, nil
 	}
@@ -60,7 +60,7 @@ func (r *TenantRepository) ProductBarcode(normalized string) (models.ProductBarc
 
 func (r *TenantRepository) ProductBarcodeForProduct(normalized string, productID uuid.UUID) (models.ProductBarcode, bool, error) {
 	var value models.ProductBarcode
-	err := r.db.Where("id_empresa = ? AND id_produto = ? AND codigo_barras_normalizado = ?", r.company, productID, normalized).First(&value).Error
+	err := r.catalog(&models.ProductBarcode{}).Where("id_produto = ? AND codigo_barras_normalizado = ?", productID, normalized).First(&value).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return value, false, nil
 	}
@@ -69,7 +69,7 @@ func (r *TenantRepository) ProductBarcodeForProduct(normalized string, productID
 
 func (r *TenantRepository) ProductBySKU(normalized string) (models.Product, bool, error) {
 	var value models.Product
-	err := r.db.Where("id_empresa = ? AND UPPER(BTRIM(sku)) = ?", r.company, normalized).First(&value).Error
+	err := r.catalog(&models.Product{}).Where("UPPER(BTRIM(sku)) = ?", normalized).First(&value).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return value, false, nil
 	}
@@ -81,20 +81,29 @@ func (r *TenantRepository) ProductsByIDs(ids []uuid.UUID) ([]models.Product, err
 	if len(ids) == 0 {
 		return values, nil
 	}
-	err := r.db.Where("id_empresa = ? AND id IN ?", r.company, ids).Find(&values).Error
+	err := r.catalog(&models.Product{}).Where("id IN ?", ids).Find(&values).Error
 	return values, err
 }
 
-// ProductIDsOwnedByAnotherCompany checks explicit canonical IDs without
-// returning any data from the other tenant.
+// ProductIDsOwnedByAnotherCompany checks explicit canonical IDs outside the
+// current company/group without returning their catalog data.
 func (r *TenantRepository) ProductIDsOwnedByAnotherCompany(ids []uuid.UUID) ([]uuid.UUID, error) {
 	var foreignIDs []uuid.UUID
 	if len(ids) == 0 {
 		return foreignIDs, nil
 	}
-	err := r.db.Model(&models.Product{}).
-		Where("id IN ? AND id_empresa <> ?", ids, r.company).
-		Pluck("id", &foreignIDs).Error
+	query := r.db.Model(&models.Product{}).Where("id IN ? AND id_empresa <> ?", ids, r.company)
+	if r.group != uuid.Nil {
+		query = r.db.Model(&models.Product{}).Where(`id IN ? AND (
+			id_empresa <> ? OR (
+				id_empresa = ? AND id_grupo <> ? AND NOT EXISTS (
+					SELECT 1 FROM produto scoped
+					WHERE scoped.id_empresa = ? AND scoped.id_grupo = ? AND scoped.id = produto.id
+				)
+			)
+		)`, ids, r.company, r.company, r.group, r.company, r.group)
+	}
+	err := query.Pluck("id", &foreignIDs).Error
 	return foreignIDs, err
 }
 
@@ -103,18 +112,18 @@ func (r *TenantRepository) ProductsBySKUs(skus []string) ([]models.Product, erro
 	if len(skus) == 0 {
 		return values, nil
 	}
-	err := r.db.Where("id_empresa = ? AND UPPER(BTRIM(sku)) IN ?", r.company, skus).Find(&values).Error
+	err := r.catalog(&models.Product{}).Where("UPPER(BTRIM(sku)) IN ?", skus).Find(&values).Error
 	return values, err
 }
 
 // NextProductCanonicalCode returns the next six-digit numeric code available
-// in the tenant-wide product namespace. The caller still checks the value
+// in the current group product namespace. The caller still checks the value
 // against the current store mapping and the in-memory batch because a batch
 // may reserve more than one code before it commits.
 func (r *TenantRepository) NextProductCanonicalCode() (string, error) {
 	var maximum int64
-	err := r.db.Model(&models.Product{}).
-		Where("id_empresa = ? AND sku ~ '^[0-9]{1,6}$'", r.company).
+	err := r.catalog(&models.Product{}).
+		Where("sku ~ '^[0-9]{1,6}$'").
 		Select("COALESCE(MAX(CAST(sku AS BIGINT)), 0)").
 		Scan(&maximum).Error
 	if err != nil {
@@ -131,13 +140,13 @@ func (r *TenantRepository) ProductBarcodesByNormalizedValues(values []string) ([
 	if len(values) == 0 {
 		return rows, nil
 	}
-	err := r.db.Where("id_empresa = ? AND codigo_barras_normalizado IN ?", r.company, values).Find(&rows).Error
+	err := r.catalog(&models.ProductBarcode{}).Where("codigo_barras_normalizado IN ?", values).Find(&rows).Error
 	return rows, err
 }
 
 func (r *TenantRepository) ProductMapping(storeID uuid.UUID, localCode string) (models.ProductStoreMapping, bool, error) {
 	var value models.ProductStoreMapping
-	err := r.db.Where("id_empresa = ? AND id_loja = ? AND UPPER(BTRIM(codigo_local)) = UPPER(BTRIM(?))", r.company, storeID, localCode).First(&value).Error
+	err := r.catalog(&models.ProductStoreMapping{}).Where("id_loja = ? AND UPPER(BTRIM(codigo_local)) = UPPER(BTRIM(?))", storeID, localCode).First(&value).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return value, false, nil
 	}
@@ -149,7 +158,7 @@ func (r *TenantRepository) ProductMappingsByLocalCodes(storeID uuid.UUID, localC
 	if len(localCodes) == 0 {
 		return values, nil
 	}
-	err := r.db.Where("id_empresa = ? AND id_loja = ? AND UPPER(BTRIM(codigo_local)) IN ?", r.company, storeID, localCodes).Find(&values).Error
+	err := r.catalog(&models.ProductStoreMapping{}).Where("id_loja = ? AND UPPER(BTRIM(codigo_local)) IN ?", storeID, localCodes).Find(&values).Error
 	return values, err
 }
 
@@ -158,13 +167,13 @@ func (r *TenantRepository) ProductMappingsByProductIDs(storeID uuid.UUID, produc
 	if len(productIDs) == 0 {
 		return values, nil
 	}
-	err := r.db.Where("id_empresa = ? AND id_loja = ? AND id_produto IN ?", r.company, storeID, productIDs).Find(&values).Error
+	err := r.catalog(&models.ProductStoreMapping{}).Where("id_loja = ? AND id_produto IN ?", storeID, productIDs).Find(&values).Error
 	return values, err
 }
 
 func (r *TenantRepository) ProductMappingForProduct(storeID, productID uuid.UUID) (models.ProductStoreMapping, bool, error) {
 	var value models.ProductStoreMapping
-	err := r.db.Where("id_empresa = ? AND id_loja = ? AND id_produto = ?", r.company, storeID, productID).First(&value).Error
+	err := r.catalog(&models.ProductStoreMapping{}).Where("id_loja = ? AND id_produto = ?", storeID, productID).First(&value).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return value, false, nil
 	}
@@ -181,7 +190,7 @@ func (r *TenantRepository) MoveProductMapping(storeID, productID uuid.UUID, loca
 		return models.Error(400, "localCodeCandidate e obrigatorio")
 	}
 	var occupied models.ProductStoreMapping
-	err := r.db.Where("id_empresa = ? AND id_loja = ? AND UPPER(BTRIM(codigo_local)) = UPPER(BTRIM(?))", r.company, storeID, localCode).First(&occupied).Error
+	err := r.catalog(&models.ProductStoreMapping{}).Where("id_loja = ? AND UPPER(BTRIM(codigo_local)) = UPPER(BTRIM(?))", storeID, localCode).First(&occupied).Error
 	if err == nil && occupied.ProductID != productID {
 		return models.Error(409, "PRODUCT_LOCAL_CODE_OCCUPIED: o codigo local candidato ja pertence a outro produto")
 	}
@@ -189,30 +198,29 @@ func (r *TenantRepository) MoveProductMapping(storeID, productID uuid.UUID, loca
 		return err
 	}
 	var mapping models.ProductStoreMapping
-	err = r.db.Where("id_empresa = ? AND id_loja = ? AND id_produto = ?", r.company, storeID, productID).First(&mapping).Error
+	err = r.catalog(&models.ProductStoreMapping{}).Where("id_loja = ? AND id_produto = ?", storeID, productID).First(&mapping).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		mapping = models.ProductStoreMapping{Tenant: models.NewTenant(r.company), StoreID: storeID, ProductID: productID, LocalCode: localCode}
-		return r.db.Create(&mapping).Error
+		return r.Create(&mapping)
 	}
 	if err != nil {
 		return err
 	}
 	mapping.LocalCode = localCode
-	return r.db.Save(&mapping).Error
+	return r.Save(&mapping, mapping.ID)
 }
 
 // ProductMappingsForCatalog returns the local view of the canonical catalog
 // for one store. Pagination is applied before loading the related snapshots so
-// a full load cannot materialize the whole tenant in memory.
+// a full load cannot materialize the whole group catalog in memory.
 func (r *TenantRepository) ProductMappingsForCatalog(storeID uuid.UUID, offset, limit int) ([]models.ProductStoreMapping, int64, error) {
 	var total int64
-	countQuery := r.db.Model(&models.ProductStoreMapping{}).
-		Where("id_empresa = ? AND id_loja = ?", r.company, storeID)
+	countQuery := r.catalog(&models.ProductStoreMapping{}).Where("id_loja = ?", storeID)
 	if err := countQuery.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 	var values []models.ProductStoreMapping
-	query := r.db.Where("id_empresa = ? AND id_loja = ?", r.company, storeID).
+	query := r.catalog(&models.ProductStoreMapping{}).Where("id_loja = ?", storeID).
 		Order("codigo_local, id_produto").Offset(offset).Limit(limit).Find(&values)
 	return values, total, query.Error
 }
@@ -227,7 +235,7 @@ func (r *TenantRepository) ProductCatalogSourceStoreID(groupID uuid.UUID) (uuid.
 	var store models.Store
 	err := r.db.Where("id_empresa = ? AND id_grupo = ? AND ativo = TRUE", r.company, groupID).
 		Order("CASE WHEN UPPER(tipo) IN ('MATRIZ', 'MATRIX') THEN 0 ELSE 1 END").
-		Order("(SELECT COUNT(*) FROM produto_loja_mapeamento plm WHERE plm.id_empresa = loja.id_empresa AND plm.id_loja = loja.id) DESC").
+		Order("(SELECT COUNT(*) FROM produto_loja_mapeamento plm WHERE plm.id_empresa = loja.id_empresa AND plm.id_grupo = loja.id_grupo AND plm.id_loja = loja.id) DESC").
 		Order("data_hora_criacao ASC").
 		Order("codigo, id").
 		First(&store).Error
@@ -239,7 +247,7 @@ func (r *TenantRepository) ProductBarcodesForProducts(productIDs []uuid.UUID) ([
 	if len(productIDs) == 0 {
 		return values, nil
 	}
-	err := r.db.Where("id_empresa = ? AND id_produto IN ?", r.company, productIDs).
+	err := r.catalog(&models.ProductBarcode{}).Where("id_produto IN ?", productIDs).
 		Order("id_produto, principal DESC, codigo_barras_normalizado").Find(&values).Error
 	return values, err
 }
@@ -270,8 +278,8 @@ func (r *TenantRepository) ReassignProductBarcodes(values []string, winner uuid.
 	if len(normalized) == 0 {
 		return nil
 	}
-	where := r.db.Model(&models.ProductBarcode{}).
-		Where("id_empresa = ? AND ativo = TRUE AND codigo_barras_normalizado IN ? AND id_produto <> ?", r.company, normalized, winner)
+	where := r.catalog(&models.ProductBarcode{}).
+		Where("ativo = TRUE AND codigo_barras_normalizado IN ? AND id_produto <> ?", normalized, winner)
 	if err := where.Update("principal", false).Error; err != nil {
 		return err
 	}
@@ -286,7 +294,7 @@ func (r *TenantRepository) RemoveProductMappings(storeID uuid.UUID, productIDs [
 	if storeID == uuid.Nil || len(productIDs) == 0 {
 		return nil
 	}
-	return r.db.Where("id_empresa = ? AND id_loja = ? AND id_produto IN ?", r.company, storeID, productIDs).
+	return r.catalog(&models.ProductStoreMapping{}).Where("id_loja = ? AND id_produto IN ?", storeID, productIDs).
 		Delete(&models.ProductStoreMapping{}).Error
 }
 
@@ -295,7 +303,7 @@ func (r *TenantRepository) ProductPricesForStoreProducts(storeID uuid.UUID, prod
 	if len(productIDs) == 0 {
 		return values, nil
 	}
-	err := r.db.Where("id_empresa = ? AND id_loja = ? AND id_produto IN ?", r.company, storeID, productIDs).
+	err := r.catalog(&models.ProductPrice{}).Where("id_loja = ? AND id_produto IN ?", storeID, productIDs).
 		Order("id_produto, tipo, quantity").Find(&values).Error
 	return values, err
 }
@@ -304,19 +312,25 @@ func (r *TenantRepository) UpsertProductPrices(prices []models.ProductPrice) err
 	if len(prices) == 0 {
 		return nil
 	}
+	for i := range prices {
+		prices[i].CompanyID = r.company
+		if r.group != uuid.Nil {
+			prices[i].GroupID = r.group
+		}
+	}
 	conflict := clause.OnConflict{
-		Columns:   []clause.Column{{Name: "id_empresa"}, {Name: "id_loja"}, {Name: "id_produto"}, {Name: "tipo"}, {Name: "quantity"}},
+		Columns:   []clause.Column{{Name: "id_empresa"}, {Name: "id_grupo"}, {Name: "id_loja"}, {Name: "id_produto"}, {Name: "tipo"}, {Name: "quantity"}},
 		DoUpdates: clause.AssignmentColumns([]string{"amount", "ativo", "valid_from", "data_hora_atualizacao"}),
 	}
 	return r.db.Clauses(conflict).CreateInBatches(&prices, productRepositoryAuxBatchSize).Error
 }
 
 // ReplaceProductPrices applies the authoritative price snapshot atomically
-// for one store/product. It is deliberately scoped by tenant, store and
+// for one store/product. It is deliberately scoped by group, store and
 // product so a malformed integration request can never clear another store's
 // prices.
 func (r *TenantRepository) ReplaceProductPrices(storeID, productID uuid.UUID, prices []models.ProductPrice) error {
-	if err := r.db.Where("id_empresa = ? AND id_loja = ? AND id_produto = ?", r.company, storeID, productID).
+	if err := r.catalog(&models.ProductPrice{}).Where("id_loja = ? AND id_produto = ?", storeID, productID).
 		Delete(&models.ProductPrice{}).Error; err != nil {
 		return err
 	}
@@ -326,13 +340,13 @@ func (r *TenantRepository) ReplaceProductPrices(storeID, productID uuid.UUID, pr
 // ReplaceProductPricesBatch applies authoritative price snapshots for many
 // products in one statement. The caller owns the surrounding transaction, so
 // an interrupted initial load cannot leave half of one batch with stale tiers.
-// The product list is explicit and tenant-scoped to prevent a malformed
+// The product list is explicit and group-scoped to prevent a malformed
 // request from clearing prices from another store or company.
 func (r *TenantRepository) ReplaceProductPricesBatch(storeID uuid.UUID, productIDs []uuid.UUID, prices []models.ProductPrice) error {
 	if len(productIDs) == 0 {
 		return nil
 	}
-	if err := r.db.Where("id_empresa = ? AND id_loja = ? AND id_produto IN ?", r.company, storeID, productIDs).
+	if err := r.catalog(&models.ProductPrice{}).Where("id_loja = ? AND id_produto IN ?", storeID, productIDs).
 		Delete(&models.ProductPrice{}).Error; err != nil {
 		return err
 	}
@@ -343,8 +357,14 @@ func (r *TenantRepository) UpsertProducts(products []models.Product) error {
 	if len(products) == 0 {
 		return nil
 	}
+	for i := range products {
+		products[i].CompanyID = r.company
+		if r.group != uuid.Nil {
+			products[i].GroupID = r.group
+		}
+	}
 	conflict := clause.OnConflict{
-		Columns: []clause.Column{{Name: "id"}},
+		Columns: []clause.Column{{Name: "id"}, {Name: "id_grupo"}},
 		DoUpdates: clause.AssignmentColumns([]string{
 			"sku", "estoque_minimo", "margem_minima", "flag_sis", "nome", "descricao", "unidade", "marca", "codigo_marca", "ncm", "cest",
 			"data_cadastro", "aplicacao", "origem",
@@ -369,6 +389,7 @@ func (r *TenantRepository) UpsertProducts(products []models.Product) error {
 		}),
 		Where: clause.Where{Exprs: []clause.Expression{
 			clause.Eq{Column: clause.Column{Table: "produto", Name: "id_empresa"}, Value: clause.Column{Table: "excluded", Name: "id_empresa"}},
+			clause.Eq{Column: clause.Column{Table: "produto", Name: "id_grupo"}, Value: clause.Column{Table: "excluded", Name: "id_grupo"}},
 		}},
 	}
 	result := r.db.Clauses(conflict).CreateInBatches(&products, productRepositoryBatchSize)
@@ -376,7 +397,7 @@ func (r *TenantRepository) UpsertProducts(products []models.Product) error {
 		return result.Error
 	}
 	if result.RowsAffected != int64(len(products)) {
-		return models.Error(409, "PRODUCT_TENANT_CONFLICT: productId pertence a outra empresa")
+		return models.Error(409, "PRODUCT_GROUP_CONFLICT: productId pertence a outra empresa ou grupo")
 	}
 	return nil
 }
@@ -385,11 +406,21 @@ func (r *TenantRepository) UpsertProductMappings(mappings []models.ProductStoreM
 	if len(mappings) == 0 {
 		return nil
 	}
+	for i := range mappings {
+		mappings[i].CompanyID = r.company
+		if r.group != uuid.Nil {
+			mappings[i].GroupID = r.group
+		}
+	}
 	conflict := clause.OnConflict{
-		Columns: []clause.Column{{Name: "id"}},
+		Columns: []clause.Column{{Name: "id"}, {Name: "id_grupo"}},
 		DoUpdates: clause.AssignmentColumns([]string{
 			"codigo_local", "codigo_grupo_local", "grupo_nome", "codigo_subgrupo_local", "subgrupo_nome", "data_hora_atualizacao",
 		}),
+		Where: clause.Where{Exprs: []clause.Expression{
+			clause.Eq{Column: clause.Column{Table: "produto_loja_mapeamento", Name: "id_empresa"}, Value: clause.Column{Table: "excluded", Name: "id_empresa"}},
+			clause.Eq{Column: clause.Column{Table: "produto_loja_mapeamento", Name: "id_grupo"}, Value: clause.Column{Table: "excluded", Name: "id_grupo"}},
+		}},
 	}
 	return r.db.Clauses(conflict).CreateInBatches(&mappings, productRepositoryAuxBatchSize).Error
 }
@@ -398,11 +429,21 @@ func (r *TenantRepository) UpsertProductBarcodes(barcodes []models.ProductBarcod
 	if len(barcodes) == 0 {
 		return nil
 	}
+	for i := range barcodes {
+		barcodes[i].CompanyID = r.company
+		if r.group != uuid.Nil {
+			barcodes[i].GroupID = r.group
+		}
+	}
 	conflict := clause.OnConflict{
-		Columns: []clause.Column{{Name: "id"}},
+		Columns: []clause.Column{{Name: "id"}, {Name: "id_grupo"}},
 		DoUpdates: clause.AssignmentColumns([]string{
 			"codigo_barras", "codigo_barras_normalizado", "principal", "ativo", "fraction", "c00055", "data_hora_atualizacao",
 		}),
+		Where: clause.Where{Exprs: []clause.Expression{
+			clause.Eq{Column: clause.Column{Table: "produto_codigo_barras", Name: "id_empresa"}, Value: clause.Column{Table: "excluded", Name: "id_empresa"}},
+			clause.Eq{Column: clause.Column{Table: "produto_codigo_barras", Name: "id_grupo"}, Value: clause.Column{Table: "excluded", Name: "id_grupo"}},
+		}},
 	}
 	return r.db.Clauses(conflict).CreateInBatches(&barcodes, productRepositoryAuxBatchSize).Error
 }
@@ -411,8 +452,8 @@ func (r *TenantRepository) UpsertProductBarcodes(barcodes []models.ProductBarcod
 // without deleting the product barcode itself. The latter remains available
 // for EAN identity and can still be the primary C000025 barcode.
 func (r *TenantRepository) DeleteProductC00055Except(productID uuid.UUID, keep []string) error {
-	query := r.db.Model(&models.ProductBarcode{}).
-		Where("id_empresa = ? AND id_produto = ? AND c00055 = TRUE", r.company, productID)
+	query := r.catalog(&models.ProductBarcode{}).
+		Where("id_produto = ? AND c00055 = TRUE", productID)
 	if len(keep) == 0 {
 		return query.Delete(&models.ProductBarcode{}).Error
 	}
@@ -424,7 +465,7 @@ func (r *TenantRepository) ClearPrimaryProductBarcodes(productIDs []uuid.UUID) e
 	if len(productIDs) == 0 {
 		return nil
 	}
-	return r.db.Model(&models.ProductBarcode{}).
-		Where("id_empresa = ? AND id_produto IN ? AND principal = TRUE AND ativo = TRUE", r.company, productIDs).
+	return r.catalog(&models.ProductBarcode{}).
+		Where("id_produto IN ? AND principal = TRUE AND ativo = TRUE", productIDs).
 		Update("principal", false).Error
 }

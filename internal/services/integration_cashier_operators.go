@@ -17,7 +17,7 @@ var _ ICashierOperatorIntegrationService = (*Service)(nil)
 
 func (s *Service) UpsertCashierOperator(ctx context.Context, identity models.Identity, snapshot models.CashierOperatorSnapshot, pathCode string) (models.CatalogWriteResult, error) {
 	var result models.CatalogWriteResult
-	err := s.Repo.Atomic(ctx, identity.CompanyID, func(r *repositories.TenantRepository) error {
+	err := s.Repo.AtomicGroup(ctx, identity.CompanyID, identity.GroupID, func(r *repositories.TenantRepository) error {
 		if err := requireStoreIntegration(r, identity, "cashier_operator"); err != nil {
 			return err
 		}
@@ -45,7 +45,7 @@ func (s *Service) UpsertCashierOperators(ctx context.Context, identity models.Id
 	if err := validateBatchSize(len(snapshots)); err != nil {
 		return result, err
 	}
-	err := s.Repo.Atomic(ctx, identity.CompanyID, func(r *repositories.TenantRepository) error {
+	err := s.Repo.AtomicGroup(ctx, identity.CompanyID, identity.GroupID, func(r *repositories.TenantRepository) error {
 		if err := requireStoreIntegration(r, identity, "cashier_operator"); err != nil {
 			return err
 		}
